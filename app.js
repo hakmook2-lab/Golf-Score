@@ -3,7 +3,7 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.0.0';
+var VERSION='3.0.1';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
@@ -1183,6 +1183,7 @@ function onClick(e){
   if(a==='iosGuideClose'){ if(e.target===el||el.tagName==='BUTTON'){ $('#iosGuide').style.display='none'; } return; }
   if(a==='applyUpdate'){ applyUpdate(); return; }
   if(a==='settings'){ openModal(TR('설정'), settingsBody, [{label:TR('닫기')}]); return; }
+  if(a==='langToggle'){ I18N.set(I18N.lang==='ja'?'ko':'ja'); return; }
   if(a==='lang'){ I18N.set(el.getAttribute('data-v')); return; }
   if(a==='setv'){ var k=el.getAttribute('data-k'), v=el.getAttribute('data-v'); S.set[k]=(v==='true')?true:(v==='false'?false:v); save(); applyTheme(); checkBadge(); render(); return; }
   /* 설정 화면 */

@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="lib/leaflet.css">
+<link rel="stylesheet" href="leaflet.css">
 <style>
 :root{
   --bg:#f3f6f2; --card:#ffffff; --ink:#17251b; --mute:#5f6f64; --line:#dbe3dc;
@@ -53,6 +53,12 @@ a{color:var(--acc)}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px 4px;max-width:680px;margin:0 auto}
 header.top h1{font-size:19px;margin:0}
 header.top small{color:var(--mute);display:block;font-size:12px}
+header.top>div:first-child{flex:1;min-width:0}
+header.top h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.top small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.top .row{gap:6px;flex-shrink:0}
+header.top .iconbtn{padding:8px 7px}
+html:lang(ja) header.top h1{font-size:17px}
 .iconbtn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px;font-size:13px;cursor:pointer;white-space:nowrap}
 .iconbtn.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 main{padding:6px 12px 110px;max-width:680px;margin:0 auto}
@@ -253,7 +259,7 @@ html.badge #toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 <div id="updBar"><div class="in"><b>새 버전이 있습니다</b><button data-act="applyUpdate">업데이트</button></div></div>
 <header class="top">
   <div><h1>⛳ 골프 스코어</h1><small id="subTitle">홀 종료 시마다 기록 · 자동 저장</small></div>
-  <div class="row"><button class="iconbtn" data-act="settings" aria-label="설정">⚙️</button><button class="iconbtn" data-act="install" id="installBtn">📲 앱 설치</button></div>
+  <div class="row"><button class="iconbtn" data-act="langToggle" id="langBtn" aria-label="언어 / 言語">日本語</button><button class="iconbtn" data-act="settings" aria-label="설정">⚙️</button><button class="iconbtn" data-act="install" id="installBtn">📲 앱 설치</button></div>
 </header>
 <div id="installBar"><div class="in"><b>홈 화면에 앱으로 설치하세요</b><button data-act="install">설치</button><button class="x" data-act="hideInstallBar" aria-label="닫기">✕</button></div></div>
 <main id="main"></main>
@@ -276,7 +282,7 @@ html.badge #toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 <div id="modalRoot"></div>
 <div id="toast"></div>
 <input type="file" id="fileIn" accept=".json,application/json" style="display:none">
-<script src="lib/leaflet.js"></script>
+<script src="leaflet.js"></script>
 <script src="i18n.js"></script>
 <script src="data.js"></script>
 <script src="courses-idx.js"></script>

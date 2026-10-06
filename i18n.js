@@ -484,6 +484,7 @@ var I18N=(function(){
     d.setAttribute('lang',lang);
     document.title=tr('골프 스코어');
     var m=document.querySelector('meta[name="apple-mobile-web-app-title"]'); if(m){ m.setAttribute('content',tr('골프스코어')); }
+    var lb=document.getElementById('langBtn'); if(lb){ lb.textContent=(lang==='ja')?'한국어':'日本語'; }
     if(lang!=='ja'){ return; }
     var skip={MAIN:1,SCRIPT:1,STYLE:1};
     (function walkNode(n){

@@ -1,0 +1,35 @@
+{
+  "id": "./",
+  "name": "Golf Score · 골프 스코어 · ゴルフスコア",
+  "short_name": "Golf Score",
+  "description": "홀별 골프 스코어 · ホール別ゴルフスコア · GPS",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6f2",
+  "theme_color": "#1e7a40",
+  "categories": [
+    "sports"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

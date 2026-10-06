@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>골프 스코어</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1e7a40">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="골프스코어">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="골프 스코어 · ゴルフスコア — 홀별 스코어 · ホール別スコア · GPS">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="lib/leaflet.css">
+<style>
+:root{
+  --bg:#f3f6f2; --card:#ffffff; --ink:#17251b; --mute:#5f6f64; --line:#dbe3dc;
+  --acc:#1e7a40; --acc2:#e3f1e7; --accink:#ffffff;
+  --eagle:#1d4ed8; --birdie:#3b82f6; --bogey:#fcd34d; --dbl:#ef4444;
+  --warn:#8a5300; --warnbg:#fff3dc; --danger:#b3261e;
+  --rough:#3f7a3a; --fair:#6fb35f; --green:#9be07f; --sand:#eadca6; --water:#5aa6e0; --tee:#c7ecb4;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1712; --card:#18231c; --ink:#e8f0ea; --mute:#9aab9f; --line:#2a3a2f;
+    --acc:#3fb36b; --acc2:#1d3325; --accink:#06210f;
+    --warn:#f1c980; --warnbg:#3a2d12; --danger:#ff8a80;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1712; --card:#18231c; --ink:#e8f0ea; --mute:#9aab9f; --line:#2a3a2f;
+  --acc:#3fb36b; --acc2:#1d3325; --accink:#06210f;
+  --warn:#f1c980; --warnbg:#3a2d12; --danger:#ff8a80;
+}
+/* 야외(햇빛) 고대비 모드 */
+:root[data-contrast="high"]{
+  --bg:#ffffff; --card:#ffffff; --ink:#000000; --mute:#222222; --line:#000000;
+  --acc:#00561f; --acc2:#d6f0dc; --accink:#ffffff;
+}
+:root[data-contrast="high"] body{font-size:18px}
+:root[data-contrast="high"] .card{border-width:2px}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+button,a,.chip,.li,.dot,.sb,.pb,.pcell{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.45 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  -webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px)}
+html:lang(ja) body{font-family:system-ui,-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP",sans-serif}
+button,select,input,textarea{font:inherit;color:inherit}
+a{color:var(--acc)}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px 4px;max-width:680px;margin:0 auto}
+header.top h1{font-size:19px;margin:0}
+header.top small{color:var(--mute);display:block;font-size:12px}
+.iconbtn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px;font-size:13px;cursor:pointer;white-space:nowrap}
+.iconbtn.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+main{padding:6px 12px 110px;max-width:680px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:0 0 12px}
+.card h2{font-size:15px;margin:0 0 10px;color:var(--mute);font-weight:700}
+label.f{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px;font-weight:600}
+select,input[type=text],input[type=date],input[type=number],input[type=search],textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:16px}
+textarea{min-height:80px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.row.sb{justify-content:space-between}
+.grow{flex:1}
+.btn{border:0;border-radius:14px;padding:14px 16px;font-weight:700;background:var(--acc);color:var(--accink);cursor:pointer;font-size:16px}
+.btn.sm{padding:10px 12px;font-size:14px;border-radius:12px}
+.btn.sec{background:var(--acc2);color:var(--acc)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:600}
+.btn.danger{background:transparent;border:1px solid var(--danger);color:var(--danger)}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:9px 14px;cursor:pointer;font-size:14px;font-weight:600}
+.chip.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.badge{display:inline-block;font-size:12px;padding:3px 8px;border-radius:999px;background:var(--acc2);color:var(--acc);font-weight:700}
+.badge.warn{background:var(--warnbg);color:var(--warn)}
+.note{font-size:13px;color:var(--mute)}
+.warnbox{background:var(--warnbg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;margin-top:10px}
+.infobox{background:var(--acc2);color:var(--ink);border-radius:12px;padding:10px 12px;font-size:13px;margin-top:10px}
+/* 설치 배너 */
+#installBar{display:none;max-width:680px;margin:6px auto 0;padding:0 12px}
+#installBar .in{display:flex;align-items:center;gap:10px;background:var(--acc);color:var(--accink);border-radius:14px;padding:10px 12px}
+#installBar b{flex:1;font-size:14px}
+#installBar button{border:0;border-radius:10px;padding:8px 12px;font-weight:700;background:#fff;color:#1e7a40;cursor:pointer}
+#installBar .x{background:transparent;color:var(--accink);padding:4px 6px;font-size:18px}
+#updBar{display:none;position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top,0px));z-index:40;max-width:640px;margin:0 auto}
+#updBar .in{display:flex;gap:10px;align-items:center;background:#17251b;color:#fff;border-radius:14px;padding:10px 12px}
+#updBar b{flex:1;font-size:14px}
+#updBar button{border:0;border-radius:10px;padding:8px 12px;font-weight:700;background:#3fb36b;color:#06210f}
+/* 홀 헤더 */
+.hole{text-align:center;padding:4px 0 2px}
+.hole .no{font-size:13px;color:var(--mute)}
+.hole .n{font-size:42px;font-weight:800;line-height:1}
+.hole .meta{font-size:17px;color:var(--mute);margin-top:4px}
+.hole .meta b{color:var(--ink)}
+.dots{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin:10px 0 2px}
+.dot{min-width:28px;height:28px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-size:11px;font-weight:700;color:var(--mute);cursor:pointer;padding:0 4px}
+.dot.part{border-color:var(--acc);color:var(--acc)}
+.dot.done{background:var(--acc);border-color:var(--acc);color:var(--accink)}
+.dot.cur{outline:2.5px solid var(--ink);outline-offset:1px}
+.toolrow{display:flex;gap:8px;margin-top:12px}
+.toolrow .iconbtn{flex:1 1 0;justify-content:center;min-height:52px;padding:10px 4px;font-size:16px;font-weight:700;border-radius:14px}
+/* 전 홀 결과 타일 */
+:root{--r-e:#1d4ed8;--r-ek:#fff;--r-b:#3b82f6;--r-bk:#fff;--r-p:#e3e8e4;--r-pk:#17251b;--r-g:#fcd34d;--r-gk:#3a2a00;--r-d:#ef4444;--r-dk:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--r-p:#34413a;--r-pk:#e8f0ea}}
+:root[data-theme="dark"]{--r-p:#34413a;--r-pk:#e8f0ea}
+.gpsel{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.gpsel .chip{padding:7px 16px}
+.hsum{display:flex;align-items:center;gap:12px;margin-top:10px;padding:8px 12px;background:var(--bg);border-radius:14px}
+.hsum .big{font-size:34px;font-weight:800;line-height:1;min-width:64px;text-align:center}
+.hsum .big.under{color:var(--r-e)}.hsum .big.even{color:var(--acc)}.hsum .big.over{color:var(--r-d)}
+.hsum .txt{font-size:15px;line-height:1.4}
+.hsum .txt span{font-size:13px;color:var(--mute)}
+.hgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.ht{position:relative;height:58px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.ht .hl{position:absolute;left:7px;top:4px;font-size:13px;font-weight:800;opacity:.85}
+.ht .hp{position:absolute;right:7px;top:5px;font-size:11px;font-weight:600;opacity:.7}
+.ht b{font-size:26px;font-weight:800;line-height:1;margin-top:10px}
+.ht.empty b{font-size:18px;color:var(--mute);opacity:.5}
+.ht.cur{outline:3px solid var(--ink);outline-offset:2px;z-index:1}
+.ht.r-e{background:var(--r-e);border-color:var(--r-e);color:var(--r-ek)}
+.ht.r-b{background:var(--r-b);border-color:var(--r-b);color:var(--r-bk)}
+.ht.r-p{background:var(--r-p);border-color:var(--r-p);color:var(--r-pk)}
+.ht.r-g{background:var(--r-g);border-color:var(--r-g);color:var(--r-gk)}
+.ht.r-d{background:var(--r-d);border-color:var(--r-d);color:var(--r-dk)}
+.ht.part::after{content:'';position:absolute;right:6px;bottom:6px;width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.55}
+.ht.tot{background:var(--acc2);border-color:var(--acc);color:var(--acc);cursor:default}
+.ht.tot .hd{font-size:12px;font-weight:700;line-height:1.1}
+.hole.hrow{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0}
+.hole.hrow .n{font-size:48px}
+.hole.hrow .n small{font-size:15px;font-weight:700;color:var(--mute);margin-left:2px}
+.hole.hrow .hm{text-align:left}
+.hole.hrow .meta{margin-top:0;font-size:19px}
+.hole.hrow .no{font-size:14px;margin-top:2px}
+.ht.tot .hl{position:static;font-size:12px;line-height:1.1}
+.ht.tot b{font-size:22px;margin-top:2px}
+.hleg{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;margin-top:10px;font-size:12px;color:var(--mute)}
+.hleg span{display:inline-flex;align-items:center;gap:4px}
+.hleg i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.hleg i.r-e{background:var(--r-e)}.hleg i.r-b{background:var(--r-b)}.hleg i.r-p{background:var(--r-p);border:1px solid var(--line)}.hleg i.r-g{background:var(--r-g)}.hleg i.r-d{background:var(--r-d)}
+.hleg i.dotm{width:8px;height:8px;border-radius:50%;background:var(--mute)}
+/* 거리 패널 */
+.dist{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;text-align:center}
+.dist div{background:var(--bg);border-radius:12px;padding:8px 2px}
+.dist b{display:block;font-size:26px;line-height:1.1}
+.dist span{font-size:11px;color:var(--mute)}
+/* 플레이어 */
+.pname{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px}
+.pname b{font-size:17px}
+.pname span{font-size:13px;color:var(--mute);text-align:right}
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stepper .sb{width:76px;height:64px;border-radius:16px;border:1px solid var(--line);background:var(--bg);font-size:34px;font-weight:700;cursor:pointer;line-height:1}
+.stepper .sb:active{transform:scale(.96)}
+.stepper .val{flex:1;text-align:center}
+.stepper .val .num{font-size:52px;font-weight:800;line-height:1}
+.stepper .val .lab{font-size:14px;font-weight:700;min-height:20px}
+.lab.e{color:#b58900}.lab.b{color:#d6453d}.lab.p{color:var(--acc)}.lab.g{color:#3a6fc0}.lab.d{color:#2b4f8a}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.g6 .chip{padding:10px 0;text-align:center}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.chips .chip{text-align:center;padding:12px 2px;font-size:14px;min-width:0;border-radius:12px}
+.sub{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:14px;color:var(--mute);gap:6px;flex-wrap:wrap}
+.pb{min-width:52px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:18px;cursor:pointer;padding:0 8px}
+.pb.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.pv{min-width:30px;text-align:center;font-size:20px;font-weight:700;color:var(--ink)}
+.xbtn{border:0;background:transparent;color:var(--mute);font-size:13px;cursor:pointer;text-decoration:underline;padding:4px}
+.nav2{display:grid;grid-template-columns:1fr 1.6fr;gap:10px;margin-top:4px}
+/* 스코어카드 */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table.sc{border-collapse:collapse;width:100%;font-size:14px;text-align:center}
+table.sc th,table.sc td{padding:7px 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.sc thead th{background:var(--acc2);color:var(--acc);font-size:12px}
+table.sc .sticky{position:sticky;left:0;background:var(--card);text-align:left;padding-left:8px;min-width:74px;max-width:96px;overflow:hidden;text-overflow:ellipsis;z-index:1;border-right:1px solid var(--line)}
+table.sc thead .sticky{background:var(--acc2)}
+table.sc .sum{font-weight:800;background:var(--bg)}
+table.sc tr.parrow td{color:var(--mute);font-size:12px}
+.mk{display:inline-flex;min-width:26px;height:26px;align-items:center;justify-content:center;font-weight:700}
+.mk.e{background:var(--eagle);color:#fff;border-radius:50%;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--eagle)}
+.mk.b{background:var(--birdie);color:#fff;border-radius:50%}
+.mk.g{background:var(--bogey);color:#3a2a00;border-radius:4px}
+.mk.d{background:var(--dbl);color:#fff;border-radius:4px;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--dbl)}
+.sumgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;text-align:center}
+.sumgrid div{background:var(--bg);border-radius:12px;padding:8px 2px}
+.sumgrid b{display:block;font-size:19px}
+.sumgrid span{font-size:11px;color:var(--mute)}
+.pl{font-weight:800;margin:14px 0 4px}
+table.kv{width:100%;border-collapse:collapse;font-size:14px}
+table.kv td{padding:7px 4px;border-bottom:1px solid var(--line)}
+table.kv td:last-child{text-align:right;font-weight:700}
+.pos{color:#1f8a47}.neg{color:#c0392b}
+/* 목록 */
+.li{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer}
+.li .t{font-weight:700}
+.li .s{font-size:13px;color:var(--mute)}
+.li .r{text-align:right;font-weight:800;font-size:17px;white-space:nowrap}
+.lirow{padding:10px 0;border-bottom:1px solid var(--line)}
+/* 코스 편집 */
+.pcell{width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:20px;font-weight:800;cursor:pointer}
+.g9{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;text-align:center}
+.g9 .hn{font-size:11px;color:var(--mute)}
+.g9 .si{font-size:10px;color:var(--mute)}
+/* 통계 */
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.statgrid div{background:var(--bg);border-radius:12px;padding:10px 2px}
+.statgrid b{display:block;font-size:22px}
+.statgrid span{font-size:11px;color:var(--mute)}
+/* 홀 지도 */
+.holemap{position:relative;background:var(--rough);border-radius:14px;overflow:hidden;margin-top:10px;touch-action:manipulation}
+.holemap svg{display:block;width:100%;height:auto}
+.holemap .lg{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;border-radius:8px;padding:4px 8px}
+.holemap .tapinfo{position:absolute;left:8px;right:8px;bottom:8px;text-align:center;background:rgba(0,0,0,.65);color:#fff;font-size:13px;border-radius:8px;padding:4px 8px;display:none}
+#mapFull{position:fixed;inset:0;z-index:50;background:#000;display:none;flex-direction:column}
+#mapFull .bar{display:flex;gap:6px;align-items:center;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;background:#17251b;color:#fff;flex-wrap:wrap}
+#mapFull .bar b{flex:1;font-size:14px}
+#mapFull .bar button{border:0;border-radius:10px;padding:8px 10px;font-weight:700;background:#2c3e31;color:#fff;cursor:pointer}
+#mapFull .bar button.on{background:#3fb36b;color:#06210f}
+#lmap{flex:1}
+#mapInfo{background:#17251b;color:#fff;font-size:14px;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+/* 탭 */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
+nav.tabs button{border:0;background:transparent;padding:6px 0;font-size:11px;color:var(--mute);cursor:pointer;font-weight:700}
+nav.tabs button .ic{display:block;font-size:21px;line-height:1.15}
+nav.tabs button.on{color:var(--acc)}
+/* 호스팅 배지(예: Powered by Netlify)가 화면 아래를 가릴 때: 탭 바를 위로 올림 */
+html.badge nav.tabs{bottom:calc(64px + env(safe-area-inset-bottom,0px));left:8px;right:8px;border:1px solid var(--line);border-radius:16px;padding-bottom:6px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+html.badge main{padding-bottom:190px}
+html.badge #toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+/* 모달 / 토스트 */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:60}
+.sheet{background:var(--card);width:100%;max-width:680px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:88%;overflow:auto}
+.sheet h3{margin:0 0 8px}
+.sheet .body{font-size:15px}
+.sheet .body li{margin:6px 0}
+.sheet .row.btns{margin-top:14px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));background:#222;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:70;max-width:90%;text-align:center}
+#toast.on{opacity:.95}
+/* 아이폰 설치 안내 화살표 */
+#iosGuide{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.78);color:#fff;display:none;flex-direction:column;justify-content:flex-end;padding:20px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+#iosGuide .box{background:#fff;color:#17251b;border-radius:18px;padding:16px;font-size:15px}
+#iosGuide ol{margin:6px 0 0;padding-left:22px}
+#iosGuide li{margin:6px 0}
+#iosGuide .arrow{font-size:46px;text-align:center;line-height:1;margin-top:10px;animation:bob 1s infinite}
+#iosGuide .arrow.right{text-align:right}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+.shareic{display:inline-block;border:1.5px solid currentColor;border-radius:4px;width:18px;height:18px;text-align:center;line-height:14px;font-size:13px;vertical-align:-3px}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="updBar"><div class="in"><b>새 버전이 있습니다</b><button data-act="applyUpdate">업데이트</button></div></div>
+<header class="top">
+  <div><h1>⛳ 골프 스코어</h1><small id="subTitle">홀 종료 시마다 기록 · 자동 저장</small></div>
+  <div class="row"><button class="iconbtn" data-act="settings" aria-label="설정">⚙️</button><button class="iconbtn" data-act="install" id="installBtn">📲 앱 설치</button></div>
+</header>
+<div id="installBar"><div class="in"><b>홈 화면에 앱으로 설치하세요</b><button data-act="install">설치</button><button class="x" data-act="hideInstallBar" aria-label="닫기">✕</button></div></div>
+<main id="main"></main>
+<nav class="tabs" id="tabs">
+  <button data-act="tab" data-tab="round"><span class="ic">⛳</span>라운드</button>
+  <button data-act="tab" data-tab="card"><span class="ic">📋</span>스코어카드</button>
+  <button data-act="tab" data-tab="history"><span class="ic">🕘</span>기록</button>
+  <button data-act="tab" data-tab="stats"><span class="ic">📊</span>통계</button>
+  <button data-act="tab" data-tab="courses"><span class="ic">🏌️</span>코스</button>
+</nav>
+<div id="mapFull">
+  <div class="bar"><b id="mapTitle">위성지도</b>
+    <button data-act="mapGps" id="mapGpsBtn">📍 내 위치</button>
+    <button data-act="mapPin" id="mapPinBtn">🚩 그린 위치 지정</button>
+    <button data-act="mapClose">닫기</button></div>
+  <div id="lmap"></div>
+  <div id="mapInfo">지도를 누르면 거리가 표시됩니다.</div>
+</div>
+<div id="iosGuide" data-act="iosGuideClose"></div>
+<div id="modalRoot"></div>
+<div id="toast"></div>
+<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+<script src="lib/leaflet.js"></script>
+<script src="i18n.js"></script>
+<script src="data.js"></script>
+<script src="courses-idx.js"></script>
+<script src="geo.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

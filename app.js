@@ -3,12 +3,12 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.5.0';
+var VERSION='3.7.0';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
 var S={ver:2,current:null,rounds:[],pars:{},custom:[],names:[],hcps:[],lastCourse:null,lastN:1,greens:{},
-  set:{unit:'yd',contrast:'normal',theme:'auto',wake:true,voice:true,fx:true,cur:'IDR',hideInstall:false,lastBackup:0,backupCount:0,gps:false,mapOn:true,me:'',badgeGap:'auto'}};
+  set:{unit:'yd',contrast:'normal',theme:'auto',wake:true,voice:true,fx:true,vib:true,cur:'IDR',hideInstall:false,lastBackup:0,backupCount:0,gps:false,mapOn:true,me:'',badgeGap:'auto'}};
 var UI={tab:'round',setup:null,openHist:null,openCourse:null,modal:null,pos:null,acc:null,search:null,dl:null,statP:'all',tap:null,gp:0};
 var modalCbs=[];
 
@@ -65,18 +65,44 @@ var FX={timer:null, raf:null, cv:null, parts:[], rockets:[], until:0};
 function fxTier(s,par){ if(s==null){ return 0; } var d=s-par; if(s===1||d<=-3){ return 4; } if(d===-2){ return 3; } if(d===-1){ return 2; } if(d===0){ return 1; } return 0; }
 function queueFx(r,p,h,delay){
   clearTimeout(FX.timer);
-  FX.timer=setTimeout(function(){
+  var run=function(){
     if(S.set.fx===false){ return; }
     var s=r.scores[p]&&r.scores[p][h]; var t=fxTier(s,r.par[h]); if(!t){ return; }
     if(!r.fx){ r.fx={}; }
     var k=p+'-'+h; if(r.fx[k]===s){ return; }   /* 같은 홀·같은 점수는 한 번만 */
     r.fx[k]=s; save();
     celebrate(t, relName(s-r.par[h],s,r.par[h]), r.players.length>1?r.players[p]:'');
-  }, delay==null?60:delay);
+  };
+  /* 원터치 버튼은 바로 실행(아이폰 진동은 누른 순간에만 허용됨), ± 버튼은 손을 멈춘 뒤 실행 */
+  if(!delay){ run(); } else { FX.timer=setTimeout(run,delay); }
+}
+/* ================= 진동 ================= */
+/* 안드로이드: Vibration API / 아이폰(iOS 18 이상 Safari·홈 화면 앱): 스위치 토글의 햅틱을 이용 */
+var HAP=null;
+function hapTick(){
+  try{
+    if(!HAP){
+      var i=document.createElement('input'); i.type='checkbox'; i.setAttribute('switch',''); i.id='hapSw';
+      i.setAttribute('aria-hidden','true'); i.tabIndex=-1;
+      i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none;width:1px;height:1px';
+      var l=document.createElement('label'); l.htmlFor='hapSw'; l.id='hapLb';
+      l.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none;width:1px;height:1px';
+      document.body.appendChild(i); document.body.appendChild(l); HAP=l;
+    }
+    HAP.click();
+  }catch(e){}
+}
+var VIB_PAT=[[90],[110,70,110],[160,80,160,80,320],[220,100,220,100,220,100,700]];
+function vibrate(tier){
+  if(S.set.vib===false||!tier){ return; }
+  var pat=VIB_PAT[Math.min(4,tier)-1];
+  if(navigator.vibrate){ try{ if(navigator.vibrate(pat)){ return; } }catch(e){} }
+  var n=Math.ceil(pat.length/2); hapTick();
+  for(var k=1;k<n;k++){ setTimeout(hapTick,k*170); }
 }
 function celebrate(tier,word,who){
   var reduce=false; try{ reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
-  try{ if(navigator.vibrate){ navigator.vibrate([[30],[40,60,40],[60,80,60,80,120],[80,60,80,60,80,60,200]][tier-1]); } }catch(e){}
+  vibrate(tier);
   fxBanner(tier,word,who);
   if(reduce){ return; }
   var cv=FX.cv;
@@ -542,6 +568,8 @@ function vSetup(){
 }
 
 /* ================= 뷰: 홀 입력 ================= */
+/* 홀 이름: 한국어 '7번 홀' / 일본어 '7番ホール' / 영어 'Hole 7' */
+function holeName(l){ return I18N.lang==='en'?'Hole '+l:l+TR('번 홀'); }
 /* 점수 원터치 버튼 (pre='' 본 화면, 'p' 홀 팝업) */
 function scoreChips(s,par,p,pre){
   return [['e',TR('이글'),-2],['b',TR('버디'),-1],['p',TR('파'),0],['g',TR('보기'),1],['d',TR('더블보기'),2],['t',TR('트리플보기'),3],['dp',TR('더블파'),null]].map(function(x){
@@ -600,7 +628,7 @@ function holeGrid(r){
       var cntP=0; for(var q=0;q<P;q++){ if(r.scores[q][hh]!=null){ cntP++; } }
       var cls='ht'+(sc!=null?' r-'+relCls(sc-pr):' empty')+(i===r.idx?' cur':'')+(P>1&&cntP>0&&cntP<P?' part':'');
       if(sc!=null){ t+=sc; pp+=pr; n++; }
-      out+='<button class="'+cls+'" data-act="holePop" data-i="'+i+'" aria-label="'+esc(r.labels[hh])+TR('번 홀')+(sc!=null?' '+sc+TR('타'):'')+'">'+
+      out+='<button class="'+cls+'" data-act="holePop" data-i="'+i+'" aria-label="'+esc(holeName(r.labels[hh]))+(sc!=null?' '+sc+TR('타'):'')+'">'+
         '<span class="hl">'+esc(r.labels[hh])+'</span><span class="hp">P'+pr+'</span><b>'+(sc!=null?sc:'–')+'</b></button>';
     }
     var lbl=N<=9?TR('합계'):(s0===0?TR('전반'):TR('후반'));
@@ -620,7 +648,7 @@ function vHole(r){
     '<button class="iconbtn'+(watchId!=null?' on':'')+'" data-act="gpsToggle">📍 GPS</button>'+
     '<button class="iconbtn" data-act="undo"'+(r.undo&&r.undo.length?'':' disabled style="opacity:.4"')+TR('>↶ 실행취소</button></div>');
   var yt=yardText(r,h);
-  var out='<div class="card"><div class="hole hrow"><div class="n">'+esc(r.labels[h])+TR('<small>번 홀</small></div>')+
+  var out='<div class="card"><div class="hole hrow"><div class="n">'+(I18N.lang==='en'?'<small class="pre">HOLE</small>'+esc(r.labels[h])+'</div>':esc(r.labels[h])+TR('<small>번 홀</small></div>'))+
     '<div class="hm"><div class="meta">PAR <b>'+par+'</b>'+(si?' · HCP <b>'+si+'</b>':'')+'</div>'+
     '<div class="no">'+(yt?yt+' · ':(teeLabel(r)?teeLabel(r)+' · ':''))+(r.idx+1)+' / '+N+'</div></div></div>'+
     dots+tools+
@@ -705,7 +733,7 @@ function betHtml(r, rid){
   if(b.mode!=='none'){
     out+='<div class="row wrap" style="margin-top:8px">'+['IDR','KRW','JPY'].map(function(k){
       return '<button class="chip'+(r.cur===k?' on':'')+'" data-act="curSet" data-rid="'+esc(rid)+'" data-v="'+k+'">'+(k==='IDR'?TR('루피아(Rp)'):(k==='KRW'?TR('원(₩)'):TR('엔(¥)')))+'</button>'; }).join('')+'</div>';
-    out+='<label class="f">'+(b.mode==='stroke'?TR('1타당 금액'):TR('1스킨(홀)당 금액'))+' ('+(r.cur==='KRW'?TR('원'):(r.cur==='JPY'?TR('엔'):'Rp'))+')</label>'+
+    out+='<label class="f">'+(b.mode==='stroke'?TR('1타당 금액'):TR('1스킨(홀)당 금액'))+' ('+String(r.cur==='KRW'?TR('원'):(r.cur==='JPY'?TR('엔'):'Rp')).trim()+')</label>'+
       '<div class="row"><input type="text" inputmode="numeric" data-bet="unit" data-rid="'+esc(rid)+'" value="'+(b.unit||'')+'" class="grow">'+
       '<button class="chip'+(b.net?' on':'')+'" data-act="betNet" data-rid="'+esc(rid)+TR('">네트 적용</button></div>');
     var c=betCalc(r);
@@ -930,13 +958,15 @@ function vCourses(){
 /* ================= 설정 ================= */
 function settingsBody(){
   var ch=function(key,vals){ return '<div class="row wrap">'+vals.map(function(v){ return '<button class="chip'+(S.set[key]===v[0]?' on':'')+'" data-act="setv" data-k="'+key+'" data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('')+'</div>'; };
-  return TR('<label class="f">언어 / 言語</label><div class="row wrap">')+[['ko',TR('한국어')],['ja','日本語']].map(function(x){
+  return '<label class="f">언어 · 言語 · Language</label><div class="row wrap">'+[['ko','한국어'],['ja','日本語'],['en','English']].map(function(x){
       return '<button class="chip'+(I18N.lang===x[0]?' on':'')+'" data-act="lang" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('')+'</div>'+
     TR('<label class="f">거리 단위</label>')+ch('unit',[['yd',TR('야드')],['m',TR('미터')]])+
     TR('<label class="f">야외 고대비 모드 (햇빛 아래 잘 보이게)</label>')+ch('contrast',[['normal',TR('보통')],['high',TR('고대비')]])+
     TR('<label class="f">화면 테마</label>')+ch('theme',[['auto',TR('자동')],['light',TR('밝게')],['dark',TR('어둡게')]])+
     TR('<label class="f">라운드 중 화면 꺼짐 방지</label>')+ch('wake',[[true,TR('켜기')],[false,TR('끄기')]])+
     TR('<label class="f">축하 효과 (파 이하 기록 시 꽃가루·불꽃)</label>')+ch('fx',[[true,TR('켜기')],[false,TR('끄기')]])+
+    TR('<label class="f">축하 진동 (파 이하 기록 시)</label>')+'<div class="row wrap">'+[[true,TR('켜기')],[false,TR('끄기')]].map(function(v){ return '<button class="chip'+(S.set.vib===v[0]?' on':'')+'" data-act="setv" data-k="vib" data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('')+
+      '<button class="chip" data-act="vibTest">'+TR('📳 진동 시험')+'</button></div>'+
 
     TR('<label class="f">기본 통화 (내기)</label>')+ch('cur',[['IDR',TR('루피아')],['KRW',TR('원')],['JPY',TR('엔')]])+
     TR('<label class="f">아래 탭 올리기 (화면 아래 배지가 탭을 가릴 때)</label>')+ch('badgeGap',[['auto',TR('자동')],['on',TR('올리기')],['off',TR('안 함')]])+
@@ -1295,8 +1325,9 @@ function onClick(e){
   if(a==='iosGuideClose'){ if(e.target===el||el.tagName==='BUTTON'){ $('#iosGuide').style.display='none'; } return; }
   if(a==='applyUpdate'){ applyUpdate(); return; }
   if(a==='settings'){ openModal(TR('설정'), settingsBody, [{label:TR('닫기')}]); return; }
-  if(a==='langToggle'){ I18N.set(I18N.lang==='ja'?'ko':'ja'); return; }
+  if(a==='langToggle'){ I18N.pick(); return; }
   if(a==='lang'){ I18N.set(el.getAttribute('data-v')); return; }
+  if(a==='vibTest'){ var vt=(UI.vt||0)%4+1; UI.vt=vt; var sv=S.set.vib; S.set.vib=true; vibrate(vt); S.set.vib=sv; toast(['',TR('파'),TR('버디'),TR('이글'),TR('홀인원')][vt]+' 📳'); return; }
   if(a==='setv'){ var k=el.getAttribute('data-k'), v=el.getAttribute('data-v'); S.set[k]=(v==='true')?true:(v==='false'?false:v); save(); applyTheme(); checkBadge(); render(); return; }
   /* 설정 화면 */
   if(a==='n'){ UI.setup.n=parseInt(el.getAttribute('data-v'),10); render(); return; }
@@ -1332,7 +1363,7 @@ function onClick(e){
     var u0=r.undo[r.undo.length-1];
     if(u0&&JSON.stringify([u0.s,u0.pt,u0.f,u0.pn])===JSON.stringify([r.scores.map(function(x){return x[h];}),r.putts.map(function(x){return x[h];}),r.fir[h],r.pen[h]])){ r.undo.pop(); }
     buzz(); save(); render();
-    if(a==='inc'||a==='chip'){ queueFx(r,p,h,a==='inc'?800:60); }
+    if(a==='inc'||a==='chip'){ queueFx(r,p,h,a==='inc'?800:0); }
     return;
   }
   if(r&&a==='undo'){ undo(r); return; }
@@ -1343,7 +1374,7 @@ function onClick(e){
     var prevH=(gi!==r.idx)?r.order[r.idx]:null;
     if(prevH!=null){ r.idx=gi; save(); }   /* 누른 홀을 현재 홀로 선택 */
     UI.pop={i:gi,p:gpp};
-    openModal(r.labels[hq]+TR('번 홀')+' · PAR '+r.par[hq]+(r.players.length>1?' · '+r.players[gpp]:''), holePopBody,
+    openModal(holeName(r.labels[hq])+' · PAR '+r.par[hq]+(r.players.length>1?' · '+r.players[gpp]:''), holePopBody,
       [{label:TR('닫기'),fn:function(){ UI.pop=null; }}]);
     if(prevH!=null){ cheerHole(r,prevH,true); }
     return;
@@ -1357,7 +1388,7 @@ function onClick(e){
     if(r.putts[pp][hp]!=null&&r.scores[pp][hp]!=null&&r.putts[pp][hp]>r.scores[pp][hp]){ r.putts[pp][hp]=r.scores[pp][hp]; }
     buzz(); save();
     if(a==='pinc'){ render(); } else { UI.pop=null; closeModal(); }
-    if(a!=='pclear'){ queueFx(r,pp,hp,a==='pinc'?800:60); }
+    if(a!=='pclear'){ queueFx(r,pp,hp,a==='pinc'?800:0); }
     return;
   }
   if(r&&a==='prev'){ if(r.idx>0){ r.idx--; save(); render(); window.scrollTo(0,0); } return; }
@@ -1382,7 +1413,7 @@ function onClick(e){
   if(a==='mapToggle'){ S.set.mapOn=!S.set.mapOn; save(); render(); return; }
   if(a==='satHole'&&r){
     var h2=r.order[r.idx], ref=refOf(r,h2), g=geoOf(r), c=courseOf(r.courseId);
-    openSat({title:r.courseName+' · '+r.labels[h2]+TR('번'), geo:g, ref:ref, courseId:r.courseId, pin:pinOf(r.courseId,ref),
+    openSat({title:r.courseName+' · '+holeName(r.labels[h2]), geo:g, ref:ref, courseId:r.courseId, pin:pinOf(r.courseId,ref),
       center:(g&&g.holes[ref])?null:((c&&c.ll)||(g&&g.center)||UI.pos||[-6.2,106.8])});
     if(!(g&&g.holes[ref])&&!(c&&c.ll)&&!(g&&g.center)){ $('#mapInfo').textContent=TR('이 코스 위치 정보가 없습니다. 📍 내 위치를 켜 주세요.'); }
     return;
@@ -1446,7 +1477,7 @@ function onClick(e){
     var digs=((inp&&inp.value)||'').replace(/[^0-9]/g,'');
     if(digs.length!==len){ toast(TR('숫자 ')+len+TR('개를 입력해 주세요 (현재 ')+digs.length+TR('개)')); return; }
     var arr2=digs.split('').map(Number);
-    for(var z=0;z<len;z++){ if(arr2[z]<3||arr2[z]>6){ toast((z+1)+TR('번 홀 파는 3~6 사이여야 해요')); return; } }
+    for(var z=0;z<len;z++){ if(arr2[z]<3||arr2[z]>6){ toast(I18N.lang==='en'?'Hole '+(z+1)+TR('번 홀 파는 3~6 사이여야 해요'):(z+1)+TR('번 홀 파는 3~6 사이여야 해요')); return; } }
     S.pars[pk]=arr2; save(); render(); toast(TR('파 정보를 저장했어요 (합계 ')+sum(arr2)+')'); return;
   }
   if(a==='resetPar'){ delete S.pars[el.getAttribute('data-key')]; save(); render(); toast(TR('원래 값으로 복원했어요')); return; }
@@ -1573,7 +1604,7 @@ document.addEventListener('touchend',function(e){
 document.addEventListener('gesturestart',function(e){ if(!(e.target.closest&&e.target.closest('#mapFull'))){ e.preventDefault(); } },{passive:false});
 
 /* ================= 호스팅 배지 감지 ================= */
-var OWN={fxCanvas:1,fxBanner:1,actBar:1,langPick:1,updBar:1,installBar:1,main:1,tabs:1,mapFull:1,iosGuide:1,modalRoot:1,toast:1,fileIn:1};
+var OWN={hapSw:1,hapLb:1,fxCanvas:1,fxBanner:1,actBar:1,langPick:1,updBar:1,installBar:1,main:1,tabs:1,mapFull:1,iosGuide:1,modalRoot:1,toast:1,fileIn:1};
 function checkBadge(){
   var found=false;
   Array.prototype.forEach.call(document.body.children,function(el){

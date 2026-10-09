@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Golf Score · 골프 스코어 · ゴルフスコア",
   "short_name": "Golf Score",
-  "description": "홀별 골프 스코어 · ホール別ゴルフスコア · GPS",
+  "description": "홀별 골프 스코어 · ホール別ゴルフスコア · Hole-by-hole golf score · GPS",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

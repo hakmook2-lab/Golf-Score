@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="골프스코어">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="description" content="골프 스코어 · ゴルフスコア — 홀별 스코어 · ホール別スコア · GPS">
+<meta name="description" content="골프 스코어 · ゴルフスコア · Golf Score — hole-by-hole scores · GPS">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -150,6 +150,7 @@ body.dock #toast{bottom:calc(var(--dock,140px) + 10px)}
 .ht.tot .hd{font-size:12px;font-weight:700;line-height:1.1}
 .hole.hrow{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0}
 .hole.hrow .n{font-size:48px}
+.hole.hrow .n small.pre{display:block;font-size:13px;letter-spacing:.12em;margin:0 0 -4px 2px}
 .hole.hrow .n small{font-size:15px;font-weight:700;color:var(--mute);margin-left:2px}
 .hole.hrow .hm{text-align:left}
 .hole.hrow .meta{margin-top:0;font-size:19px}
@@ -291,7 +292,7 @@ html.badge #toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 <div id="updBar"><div class="in"><b>새 버전이 있습니다</b><button data-act="applyUpdate">업데이트</button></div></div>
 <header class="top">
   <div><h1>⛳ 골프 스코어</h1><small id="subTitle">홀 종료 시마다 기록 · 자동 저장</small></div>
-  <div class="row"><button class="iconbtn" data-act="langToggle" id="langBtn" aria-label="언어 / 言語">日本語</button><button class="iconbtn" data-act="settings" aria-label="설정">⚙️</button><button class="iconbtn" data-act="install" id="installBtn">📲 앱 설치</button></div>
+  <div class="row"><button class="iconbtn" data-act="langToggle" id="langBtn" aria-label="언어 · 言語 · Language">🌐 KO</button><button class="iconbtn" data-act="settings" aria-label="설정">⚙️</button><button class="iconbtn" data-act="install" id="installBtn">📲 앱 설치</button></div>
 </header>
 <div id="installBar"><div class="in"><b>홈 화면에 앱으로 설치하세요</b><button data-act="install">설치</button><button class="x" data-act="hideInstallBar" aria-label="닫기">✕</button></div></div>
 <main id="main"></main>

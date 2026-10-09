@@ -323,7 +323,7 @@ function download(type, id, center, bounds, onStatus){
   var sel=type+'('+id+')';
   function run(b){
     var m=0.0015, bb=[b.minlat-m,b.minlon-m,b.maxlat+m,b.maxlon+m].map(function(v){ return v.toFixed(6); }).join(',');
-    var q='[out:json][timeout:40];(way["golf"]('+bb+');relation["golf"]('+bb+');node["golf"="pin"]('+bb+');way["natural"="water"]('+bb+');relation["natural"="water"]('+bb+');)->.f;.f out geom;'+sel+';out geom tags;';
+    var q='[out:json][timeout:40];(way["golf"]('+bb+');relation["golf"]('+bb+');node["golf"="pin"]('+bb+');way["natural"~"^(water|sand|beach)$"]('+bb+');relation["natural"~"^(water|sand)$"]('+bb+');way["surface"="sand"]('+bb+');way["landuse"~"^(reservoir|basin)$"]('+bb+');)->.f;.f out geom;'+sel+';out geom tags;';
     return overpass(q, onStatus, 45000).then(function(j){ return parse(j.elements||[], type, id, center, b); });
   }
   if(bounds){ return run(bounds); }
@@ -365,7 +365,7 @@ function parse(els, type, id, center, bnd){
       return;
     }
     if(t.golf==='pin' && e.type==='node'){ pins.push({ref:refOf(t), p:[r6(e.lat), r6(e.lon)]}); return; }
-    var k = t.golf ? FT[t.golf] : (t.natural==='water' ? 'w' : null);
+    var k = t.golf ? FT[t.golf] : (t.natural==='water'||t.landuse==='reservoir'||t.landuse==='basin' ? 'w' : (t.natural==='sand'||t.natural==='beach'||t.surface==='sand' ? 'b' : null));
     if(!k){ return; }
     geomOf(e).forEach(function(g){ if(g.length>2){ feats.push({t:k, g:g}); } });
   });
@@ -605,6 +605,8 @@ function signSVG(o){
     Tinv=function(q){ var x=q[0]*cs+q[1]*sn, y=-q[0]*sn+q[1]*cs; return P.ll([x,y]); };
     line=h.line.map(T); gc=T(gc0); if(h.green){ green=h.green.map(T); }
     feats=(geo&&geo.feats||[]).map(function(f){ return {t:f.t, p:f.g.map(T)}; });
+    /* 사용자가 위성지도에서 직접 표시한 벙커·해저드 → 원형 다각형으로 추가 */
+    (o.marks||[]).forEach(function(mk){ var c=T(mk.ll), rr=mk.r||(mk.t==='w'?14:7), pts=[]; for(var i=0;i<16;i++){ var a=i/16*Math.PI*2; pts.push([c[0]+Math.cos(a)*rr, c[1]+Math.sin(a)*rr*0.8]); } feats.push({t:mk.t, p:pts, user:true}); });
   } else {
     var yds=o.yd||{}, sel=yds[o.tee]||yds.white||yds.blue||yds.black||yds.red||o.mapYd;
     var Lm=sel?sel*0.9144:(par<=3?150:(par===4?370:500))*0.9144;
@@ -615,9 +617,9 @@ function signSVG(o){
   /* 이 홀 근처의 지형만: 홀 라인에서 옆으로 90m 이내 (벙커·해저드는 한 점이라도 가까우면 포함) */
   function lat(p){ var q=walk(line,Math.max(0,Math.min(Ltot,p[1]))); return Math.abs(p[0]-q.p[0]); }
   feats.forEach(function(f){ var c=centroid(f.p); f.c=c; var dd=1e9; f.p.forEach(function(p){ dd=Math.min(dd,lat(p)); }); f.dd=dd; });
-  feats=feats.filter(function(f){ return f.dd<90&&f.c[1]>-50&&f.c[1]<Ltot+70; });
+  feats=feats.filter(function(f){ return f.dd<130&&f.c[1]>-60&&f.c[1]<Ltot+80; });
   var hasFair=feats.some(function(f){ return f.t==='f'; });
-  var nB=feats.filter(function(f){ return f.t==='b'; }).length, nW=feats.filter(function(f){ return f.t==='w'; }).length;
+  var nB=feats.filter(function(f){ return f.t==='b'; }).length, nW=feats.filter(function(f){ return f.t==='w'; }).length, nU=feats.filter(function(f){ return f.user; }).length;
   var fairBand=null, cutBand=null;
   if(par>3 && !hasFair){ var s0=Math.min(120,Ltot*0.28), s1=Ltot-28; fairBand=band(line,s0,s1,17); cutBand=band(line,s0-10,s1+6,24); }
   else if(par<=3){ cutBand=band(line,Ltot-45,Ltot+4,14); }
@@ -636,7 +638,7 @@ function signSVG(o){
   var minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
   function ext(p){ minX=Math.min(minX,p[0]); maxX=Math.max(maxX,p[0]); minY=Math.min(minY,p[1]); maxY=Math.max(maxY,p[1]); }
   line.forEach(ext); ext(gc); (greenPoly||[]).forEach(ext); (fairBand||[]).forEach(ext); tees.forEach(function(t){ ext(walk(line,t.s).p); });
-  feats.forEach(function(f){ if(f.t==='b'||f.t==='w'||f.t==='f'||f.t==='g'){ f.p.forEach(function(p){ if(lat(p)<60&&p[1]>-50&&p[1]<Ltot+70){ ext(p); } }); } });
+  feats.forEach(function(f){ if(f.t==='b'||f.t==='w'||f.t==='f'||f.t==='g'){ f.p.forEach(function(p){ if(lat(p)<75&&p[1]>-50&&p[1]<Ltot+70){ ext(p); } }); } });
   if(!greenPoly){ ext([gc[0]-18,gc[1]+22]); ext([gc[0]+18,gc[1]+22]); }
   /* 화면 픽셀 기준 크기: 글자·마커는 미터가 아니라 픽셀로 보이도록 축척(u = m/px) 계산 */
   var W0=Math.max(maxX-minX,20), H0=Math.max(maxY-minY,50), sc0=Math.min(px.w/W0, px.h/H0), u0=1/sc0;
@@ -681,7 +683,7 @@ function signSVG(o){
     var dm=Math.sqrt(Math.pow(pp[0]-gc[0],2)+Math.pow(pp[1]-gc[1],2)); s+='<text x="'+(Q[0]+8*u).toFixed(1)+'" y="'+(Q[1]-4*u).toFixed(1)+'" font-size="'+fs.toFixed(2)+'"'+txt+'>'+fmtD(dm,unit)+'</text>'; } }
   s+='<g id="tapMark"></g></svg>';
   var meta=T?{Tinv:Tinv, T:T, S:function(p){ return [(p[0]-minX).toFixed(1),(maxY-p[1]).toFixed(1)]; }, minX:minX, maxY:maxY, u:u, fs:fs, gc:(o.pin||h.gc||h.line[h.line.length-1]), tee:h.line[0]}:null;
-  return {svg:s, meta:meta, synthetic:!h, len:Ltot, nB:nB, nW:nW, hasFair:hasFair};
+  return {svg:s, meta:meta, synthetic:!h, len:Ltot, nB:nB, nW:nW, nU:nU, hasFair:hasFair};
 }
 /* SVG 탭 → 좌표 */
 function svgTapLL(svg, evt, meta){
@@ -719,12 +721,14 @@ function satShow(o){
   if(h){
     L.polyline(h.line,{color:'#fff', weight:2, dashArray:'6 6', interactive:false}).addTo(layers);
     var b=L.latLngBounds(h.line); if(h.green){ b.extend(h.green); }
-    m.fitBounds(b.pad(0.25));
+    if(!o.keepView){ m.fitBounds(b.pad(0.25)); }
+  } else if(o.keepView){ /* 보던 위치 유지 */
   } else if(geo && geo.outline && geo.outline.length && !o.zoom){
     m.fitBounds(L.latLngBounds([].concat.apply([],geo.outline)).pad(0.05));
   } else if(o.center){
     m.setView(o.center, o.zoom||16);
   }
+  (o.marks||[]).forEach(function(mk){ L.circle(mk.ll,{radius:mk.r||(mk.t==='w'?14:7), color:mk.t==='w'?'#64b5f6':'#ffe082', weight:2, fillColor:mk.t==='w'?'#64b5f6':'#ffe082', fillOpacity:0.45, interactive:false}).addTo(layers); });
   if(o.pin){ L.circleMarker(o.pin,{radius:7,color:'#fff',weight:2,fillColor:'#e53935',fillOpacity:1}).addTo(layers); }
   clickCb=o.onClick||null;
   return true;

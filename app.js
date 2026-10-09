@@ -3,12 +3,12 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.0.1';
+var VERSION='3.5.0';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
 var S={ver:2,current:null,rounds:[],pars:{},custom:[],names:[],hcps:[],lastCourse:null,lastN:1,greens:{},
-  set:{unit:'yd',contrast:'normal',theme:'auto',wake:true,cur:'IDR',hideInstall:false,lastBackup:0,backupCount:0,gps:false,mapOn:true,me:'',badgeGap:'auto'}};
+  set:{unit:'yd',contrast:'normal',theme:'auto',wake:true,voice:true,fx:true,cur:'IDR',hideInstall:false,lastBackup:0,backupCount:0,gps:false,mapOn:true,me:'',badgeGap:'auto'}};
 var UI={tab:'round',setup:null,openHist:null,openCourse:null,modal:null,pos:null,acc:null,search:null,dl:null,statP:'all',tap:null,gp:0};
 var modalCbs=[];
 
@@ -59,7 +59,110 @@ function today(){ var d=new Date(); return new Date(d.getTime()-d.getTimezoneOff
 function fmtDiff(d){ return d===0?'E':(d>0?'+'+d:''+d); }
 function money(v, cur){ if(v==null||isNaN(v)){ return '–'; } var s=Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g,','); return (v<0?'-':'')+s+(cur==='KRW'?TR('원'):(cur==='JPY'?TR('엔'):' Rp')); }
 function num(s){ var d=String(s||'').replace(/[^0-9]/g,''); return d?parseInt(d,10):null; }
-function toast(m,ms){ var t=$('#toast'); t.textContent=m; t.className='on'; clearTimeout(toast._t); toast._t=setTimeout(function(){ t.className=''; }, ms||2000); }
+/* ================= 축하 효과 (파 이하) ================= */
+/* 단계: 1 파 → 작은 꽃가루 / 2 버디 → 양쪽 꽃가루 대포 / 3 이글 → 불꽃놀이 / 4 알바트로스·홀인원 → 대형 불꽃 + 금빛 비 */
+var FX={timer:null, raf:null, cv:null, parts:[], rockets:[], until:0};
+function fxTier(s,par){ if(s==null){ return 0; } var d=s-par; if(s===1||d<=-3){ return 4; } if(d===-2){ return 3; } if(d===-1){ return 2; } if(d===0){ return 1; } return 0; }
+function queueFx(r,p,h,delay){
+  clearTimeout(FX.timer);
+  FX.timer=setTimeout(function(){
+    if(S.set.fx===false){ return; }
+    var s=r.scores[p]&&r.scores[p][h]; var t=fxTier(s,r.par[h]); if(!t){ return; }
+    if(!r.fx){ r.fx={}; }
+    var k=p+'-'+h; if(r.fx[k]===s){ return; }   /* 같은 홀·같은 점수는 한 번만 */
+    r.fx[k]=s; save();
+    celebrate(t, relName(s-r.par[h],s,r.par[h]), r.players.length>1?r.players[p]:'');
+  }, delay==null?60:delay);
+}
+function celebrate(tier,word,who){
+  var reduce=false; try{ reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  try{ if(navigator.vibrate){ navigator.vibrate([[30],[40,60,40],[60,80,60,80,120],[80,60,80,60,80,60,200]][tier-1]); } }catch(e){}
+  fxBanner(tier,word,who);
+  if(reduce){ return; }
+  var cv=FX.cv;
+  if(!cv){ cv=FX.cv=document.createElement('canvas'); cv.id='fxCanvas'; document.body.appendChild(cv); }
+  var dpr=Math.min(2,window.devicePixelRatio||1), W=window.innerWidth, H=window.innerHeight;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.display='block';
+  var g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  var COL=['#ffd23f','#3b82f6','#ef4444','#22c55e','#a855f7','#f97316','#ffffff'], GOLD=['#ffd700','#ffcc33','#fff2a8','#e6b800'];
+  function conf(x,y,ang,spd,cols){ FX.parts.push({x:x,y:y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,g:0.18,dr:0.985,w:6+Math.random()*5,h:4+Math.random()*4,rot:Math.random()*6,vr:(Math.random()-.5)*0.4,c:cols[(Math.random()*cols.length)|0],life:90+Math.random()*60,t:0,k:'c'}); }
+  function spark(x,y,c,n,spd){ for(var i=0;i<n;i++){ var a=Math.PI*2*i/n+Math.random()*0.2, v=spd*(0.6+Math.random()*0.5); FX.parts.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,g:0.06,dr:0.975,r:2+Math.random()*1.5,c:c,life:55+Math.random()*30,t:0,k:'s'}); } }
+  function rocket(delay,cols){ FX.rockets.push({x:W*(0.15+Math.random()*0.7),y:H+10,vy:-(H*0.018+Math.random()*4),ty:H*(0.15+Math.random()*0.3),d:delay,c:cols[(Math.random()*cols.length)|0]}); }
+  var i;
+  if(tier===1){ for(i=0;i<45;i++){ conf(W/2,H*0.62,-Math.PI/2+(Math.random()-.5)*1.4,6+Math.random()*6,COL); } }
+  if(tier>=2){ var n=tier===2?70:90; for(i=0;i<n;i++){ conf(0,H*0.75,-Math.PI/3+(Math.random()-.5)*0.7,9+Math.random()*8,tier===4?GOLD.concat(COL):COL); conf(W,H*0.75,-Math.PI*2/3+(Math.random()-.5)*0.7,9+Math.random()*8,tier===4?GOLD.concat(COL):COL); } }
+  if(tier===3){ for(i=0;i<5;i++){ rocket(i*14,COL); } }
+  if(tier===4){ for(i=0;i<12;i++){ rocket(i*10,GOLD.concat(['#ef4444','#3b82f6','#ffffff'])); } for(i=0;i<120;i++){ FX.parts.push({x:Math.random()*W,y:-20-Math.random()*H*0.6,vx:(Math.random()-.5)*1.5,vy:2+Math.random()*2,g:0.03,dr:0.995,w:6+Math.random()*5,h:4+Math.random()*4,rot:Math.random()*6,vr:(Math.random()-.5)*0.3,c:GOLD[(Math.random()*GOLD.length)|0],life:200+Math.random()*80,t:0,k:'c'}); } }
+  FX.until=Date.now()+[0,1600,2400,3400,5200][tier];
+  if(FX.raf){ return; }
+  (function loop(){
+    g.clearRect(0,0,W,H);
+    for(var j=FX.rockets.length-1;j>=0;j--){
+      var k=FX.rockets[j]; if(k.d>0){ k.d--; continue; }
+      k.y+=k.vy; k.vy*=0.985;
+      g.fillStyle=k.c; g.beginPath(); g.arc(k.x,k.y,3,0,7); g.fill();
+      g.fillStyle='rgba(255,255,255,.35)'; g.fillRect(k.x-1,k.y+4,2,12);
+      if(k.y<=k.ty||k.vy>-1.5){ spark(k.x,k.y,k.c,tier===4?80:60,tier===4?7:6); spark(k.x,k.y,'#ffffff',16,3); FX.rockets.splice(j,1); }
+    }
+    for(var q=FX.parts.length-1;q>=0;q--){
+      var o=FX.parts[q]; o.t++; o.vx*=o.dr; o.vy=o.vy*o.dr+o.g; o.x+=o.vx; o.y+=o.vy;
+      var al=Math.max(0,1-o.t/o.life); if(al<=0||o.y>H+40){ FX.parts.splice(q,1); continue; }
+      g.globalAlpha=al; g.fillStyle=o.c;
+      if(o.k==='c'){ o.rot+=o.vr; g.save(); g.translate(o.x,o.y); g.rotate(o.rot); g.fillRect(-o.w/2,-o.h/2,o.w,o.h*Math.abs(Math.cos(o.rot*1.7))+1); g.restore(); }
+      else { g.beginPath(); g.arc(o.x,o.y,o.r,0,7); g.fill(); }
+      g.globalAlpha=1;
+    }
+    if(FX.parts.length||FX.rockets.length||Date.now()<FX.until){ FX.raf=requestAnimationFrame(loop); }
+    else { FX.raf=null; g.clearRect(0,0,W,H); cv.style.display='none'; }
+  })();
+}
+function fxBanner(tier,word,who){
+  var old=document.getElementById('fxBanner'); if(old){ old.parentNode.removeChild(old); }
+  var b=document.createElement('div'); b.id='fxBanner'; b.className='t'+tier;
+  var ic=['','⛳','🐦','🦅','🏆'][tier], ex=['','!','!','!!','!!!'][tier];
+  b.innerHTML=(who?'<small>'+esc(who)+'</small>':'')+'<span class="ic">'+ic+'</span><b>'+esc(word)+ex+'</b>';
+  document.body.appendChild(b);
+  setTimeout(function(){ if(b.parentNode){ b.className+=' out'; setTimeout(function(){ if(b.parentNode){ b.parentNode.removeChild(b); } },400); } }, [0,1100,1700,2600,4200][tier]);
+}
+/* ================= 홀 결과 한마디 (화면 표시) ================= */
+/* 다음 홀로 넘어갈 때: 첫 번째 플레이어(나) 점수로 한마디 */
+function cheerMsg(d){
+  if(d<=-1){ return TR('와우 대박입니다'); }
+  if(d===0){ return TR('축하합니다'); }
+  if(d===1){ return TR('나쁘지 않습니다'); }
+  if(d===2){ return TR('분발하세요'); }
+  return TR('연습이 필요합니다.');
+}
+function cheerHole(r,h,showToast){
+  var s=r.scores[0]&&r.scores[0][h]; if(s==null){ return; }
+  if(!r.cheered){ r.cheered={}; }
+  if(r.cheered[h]===s){ return; }  /* 같은 점수로 이미 말했으면 반복하지 않음 */
+  r.cheered[h]=s;
+  var m=cheerMsg(s-r.par[h]);
+  if(showToast){ toast((s-r.par[h]<=-1?'🎉 ':'')+m,1800); }
+}
+/* ================= 하단 고정 이전/다음 버튼 ================= */
+function renderDock(){
+  var bar=$('#actBar'); if(!bar){ return; }
+  var r=S.current, on=UI.tab==='round'&&!!r;
+  document.body.classList.toggle('dock',on);
+  if(!on){ bar.style.display='none'; bar.innerHTML=''; layoutDock(); return; }
+  var N=r.order.length, last=r.idx===N-1, h=r.order[r.idx];
+  bar.innerHTML='<button class="btn ghost" data-act="prev"'+(r.idx===0?' disabled':'')+TR('>◀ 이전</button>')+
+    '<button class="btn" data-act="'+(last?'finish':'next')+'"'+(last?' data-cheer="1"':'')+'>'+(last?TR('라운드 종료 ✔'):TR('다음 홀 ▶'))+
+    '<small>'+esc(r.labels[h])+' / '+N+'</small></button>';
+  bar.style.display='grid';
+  layoutDock();
+}
+function layoutDock(){
+  var bar=$('#actBar'), tabs=$('#tabs'); if(!bar||!tabs){ return; }
+  var fromBottom=Math.max(0,window.innerHeight-tabs.getBoundingClientRect().top);
+  bar.style.bottom=fromBottom+'px';
+  var dock=fromBottom+(bar.style.display==='none'?0:bar.offsetHeight);
+  document.documentElement.style.setProperty('--dock',dock+'px');
+}
+window.addEventListener('resize',function(){ layoutDock(); });
+function toast(m,ms){ var t=$('#toast'); t.textContent=m; t.className=UI.modal?'on top':'on'; clearTimeout(toast._t); toast._t=setTimeout(function(){ t.className=''; }, ms||2000); }
 function buzz(){ try{ if(navigator.vibrate){ navigator.vibrate(8); } }catch(e){} }
 function range(a,b){ var o=[]; for(var i=a;i<b;i++){ o.push(i); } return o; }
 function unitName(){ return S.set.unit==='m'?'m':'yd'; }
@@ -439,6 +542,38 @@ function vSetup(){
 }
 
 /* ================= 뷰: 홀 입력 ================= */
+/* 점수 원터치 버튼 (pre='' 본 화면, 'p' 홀 팝업) */
+function scoreChips(s,par,p,pre){
+  return [['e',TR('이글'),-2],['b',TR('버디'),-1],['p',TR('파'),0],['g',TR('보기'),1],['d',TR('더블보기'),2],['t',TR('트리플보기'),3],['dp',TR('더블파'),null]].map(function(x){
+    var on='';
+    if(s!=null){
+      var dd=s-par;
+      if(x[0]==='dp'){ on=(s===par*2)?' on':''; }
+      else if(x[0]==='t'){ on=(dd===3&&s!==par*2)?' on':''; }
+      else if(x[0]==='d'){ on=(dd===2&&s!==par*2)?' on':''; }
+      else { on=(dd===x[2])?' on':''; }
+    }
+    return '<button class="chip'+on+'" data-act="'+pre+'chip" data-p="'+p+'" data-off="'+(x[0]==='dp'?'dp':x[2])+'">'+x[1]+'</button>';
+  }).join('')+'<button class="chip" data-act="'+pre+'clear" data-p="'+p+'"'+(s==null?' disabled style="opacity:.4"':'')+TR('>지우기</button>');
+}
+function scoreLab(s,par){
+  if(s==null){ return {lab:'',cls:''}; }
+  var d=s-par; return {lab:relName(d,s,par)+(d!==0&&s!==1?' ('+fmtDiff(d)+')':''), cls:relCls(d)};
+}
+/* 홀 번호를 눌렀을 때 뜨는 점수 입력 팝업 */
+function holePopBody(){
+  var r=S.current, o=UI.pop; if(!r||!o){ return ''; }
+  var h=r.order[o.i], par=r.par[h], p=o.p, s=r.scores[p][h], L=scoreLab(s,par);
+  return '<div class="stepper"><button class="sb" data-act="pinc" data-d="-1">−</button>'+
+    '<div class="val"><div class="num">'+(s==null?'–':s)+'</div><div class="lab '+L.cls+'">'+esc(L.lab||TR('첫 탭 = 파'))+'</div></div>'+
+    '<button class="sb" data-act="pinc" data-d="1">＋</button></div>'+
+    '<div class="chips">'+scoreChips(s,par,p,'p')+'</div>';
+}
+function gotoIdx(r,i){
+  if(i!==r.idx){ cheerHole(r,r.order[r.idx],true); }
+  r.idx=i; save(); render(); window.scrollTo(0,0);
+}
+
 /* 전 홀 결과 타일: 버튼 자체에 타수·색으로 결과 표시 */
 function holeGrid(r){
   var N=r.order.length, P=r.players.length;
@@ -451,14 +586,12 @@ function holeGrid(r){
   var st=stats(r,gp);
   var big=st.n?fmtDiff(st.diff):'–';
   var bigCls=!st.n?'':(st.diff<0?' under':(st.diff===0?' even':' over'));
-  var cnt=[];
-  if(st.e){ cnt.push(TR('이글+ ')+st.e); }
-  if(st.b){ cnt.push(TR('버디 ')+st.b); }
-  if(st.p){ cnt.push(TR('파 ')+st.p); }
-  if(st.g){ cnt.push(TR('보기 ')+st.g); }
-  if(st.d){ cnt.push(TR('더블+ ')+st.d); }
-  out+='<div class="hsum"><div class="big'+bigCls+'">'+big+'</div><div class="txt"><b>'+(st.n?st.tot+TR('타'):TR('기록 전'))+'</b> · '+st.n+'/'+N+TR('홀')+
-    (st.net!=null?TR(' · 네트 ')+st.net:'')+'<br><span>'+(cnt.length?cnt.join(' · '):TR('홀 버튼을 누르면 그 홀로 이동합니다'))+'</span></div></div>';
+  var cnt=[['e',TR('이글+ '),st.e],['b',TR('버디 '),st.b],['p',TR('파 '),st.p],['g',TR('보기 '),st.g],['d',TR('더블+ '),st.d]].filter(function(x){ return x[2]; })
+    .map(function(x){ return '<span class="cc r-'+x[0]+'">'+esc(x[1].trim())+' <b>'+x[2]+'</b></span>'; });
+  out+='<div class="hsum"><div class="big'+bigCls+'">'+big+'</div><div class="txt">'+
+    '<div class="l1">'+(st.n?'<b>'+st.tot+'</b>'+TR('타'):'<b class="sm">'+TR('기록 전')+'</b>')+'<span class="dv">·</span><b>'+st.n+'</b>/'+N+TR('홀')+
+    (st.net!=null?'<span class="dv">·</span>'+TR(' · 네트 ').replace(/[·\s]/g,'')+' <b>'+st.net+'</b>':'')+'</div>'+
+    (cnt.length?'<div class="cnts">'+cnt.join('')+'</div>':'<div class="hint">'+TR('홀 버튼을 누르면 그 홀로 이동합니다')+'</div>')+'</div></div>';
   out+='<div class="hgrid">';
   for(var s0=0;s0<N;s0+=9){
     var t=0,pp=0,n=0;
@@ -467,7 +600,7 @@ function holeGrid(r){
       var cntP=0; for(var q=0;q<P;q++){ if(r.scores[q][hh]!=null){ cntP++; } }
       var cls='ht'+(sc!=null?' r-'+relCls(sc-pr):' empty')+(i===r.idx?' cur':'')+(P>1&&cntP>0&&cntP<P?' part':'');
       if(sc!=null){ t+=sc; pp+=pr; n++; }
-      out+='<button class="'+cls+'" data-act="goto" data-i="'+i+'" aria-label="'+esc(r.labels[hh])+TR('번 홀')+(sc!=null?' '+sc+TR('타'):'')+'">'+
+      out+='<button class="'+cls+'" data-act="holePop" data-i="'+i+'" aria-label="'+esc(r.labels[hh])+TR('번 홀')+(sc!=null?' '+sc+TR('타'):'')+'">'+
         '<span class="hl">'+esc(r.labels[hh])+'</span><span class="hp">P'+pr+'</span><b>'+(sc!=null?sc:'–')+'</b></button>';
     }
     var lbl=N<=9?TR('합계'):(s0===0?TR('전반'):TR('후반'));
@@ -499,40 +632,16 @@ function vHole(r){
     var s=r.scores[p][h], pt=r.putts[p][h], st=stats(r,p);
     var lab='', cls='';
     if(s!=null){ var d=s-par; lab=relName(d,s,par)+(d!==0&&s!==1?' ('+fmtDiff(d)+')':''); cls=relCls(d); }
-    var chips=[['e',TR('이글'),-2],['b',TR('버디'),-1],['p',TR('파'),0],['g',TR('보기'),1],['d',TR('더블보기'),2],['t',TR('트리플보기'),3],['dp',TR('더블파'),null]].map(function(x){
-      var on='';
-      if(s!=null){
-        var dd=s-par;
-        if(x[0]==='dp'){ on=(s===par*2)?' on':''; }
-        else if(x[0]==='t'){ on=(dd===3&&s!==par*2)?' on':''; }
-        else if(x[0]==='d'){ on=(dd===2&&s!==par*2)?' on':''; }
-        else { on=(dd===x[2])?' on':''; }
-      }
-      return '<button class="chip'+on+'" data-act="chip" data-p="'+p+'" data-off="'+(x[0]==='dp'?'dp':x[2])+'">'+x[1]+'</button>';
-    }).join('')+'<button class="chip" data-act="clear" data-p="'+p+'"'+(s==null?' disabled style="opacity:.4"':'')+TR('>지우기</button>');
+    var chips=scoreChips(s,par,p,'');
     var sumTxt=st.n?(TR('누적 ')+st.tot+TR('타 (')+fmtDiff(st.diff)+')'+(st.net!=null?TR(' · 네트 ')+st.net:'')+' · '+st.n+TR('홀')):TR('아직 입력 없음');
-    var extra='';
-    if(p===0){
-      if(par>3){
-        extra+=TR('<div class="sub"><span>티샷</span><span class="row">')+[['left',TR('← 좌')],['hit',TR('안착')],['right',TR('우 →')]].map(function(x){
-          return '<button class="pb'+(r.fir[h]===x[0]?' on':'')+'" data-act="fir" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join('')+'</span></div>';
-      }
-      extra+=TR('<div class="sub"><span>벌타</span><span class="row"><button class="pb" data-act="pen" data-d="-1">−</button><span class="pv">')+(r.pen[h]||0)+'</span><button class="pb" data-act="pen" data-d="1">＋</button></span></div>';
-      if(s!=null&&pt!=null){ extra+=TR('<div class="note" style="text-align:right;margin-top:4px">그린 적중(GIR): ')+((s-pt<=par-2)?TR('✔ 예'):TR('아니오'))+TR(' (자동 계산)</div>'); }
-    }
     out+='<div class="card"><div class="pname"><b>'+esc(r.players[p])+(r.hcp[p]!=null?TR(' <small class="note">핸디 ')+r.hcp[p]+'</small>':'')+'</b><span>'+sumTxt+'</span></div>'+
       '<div class="stepper"><button class="sb" data-act="inc" data-p="'+p+TR('" data-d="-1" aria-label="한 타 빼기">−</button>')+
       '<div class="val"><div class="num">'+(s==null?'–':s)+'</div><div class="lab '+cls+'">'+esc(lab||TR('첫 탭 = 파'))+'</div></div>'+
       '<button class="sb" data-act="inc" data-p="'+p+TR('" data-d="1" aria-label="한 타 더하기">＋</button></div>')+
-      '<div class="chips">'+chips+'</div>'+
-      TR('<div class="sub"><span>퍼트 수 (선택)</span><span class="row">')+
-        '<button class="pb" data-act="putt" data-p="'+p+'" data-d="-1">−</button><span class="pv">'+(pt==null?'–':pt)+'</span>'+
-        '<button class="pb" data-act="putt" data-p="'+p+'" data-d="1">＋</button></span></div>'+extra+'</div>';
+      '<div class="chips">'+chips+'</div></div>';
   }
   var last=r.idx===N-1;
-  out+='<div class="nav2"><button class="btn ghost" data-act="prev"'+(r.idx===0?' disabled':'')+TR('>◀ 이전</button>')+
-    '<button class="btn" data-act="'+(last?'finish':'next')+'">'+(last?TR('라운드 종료 ✔'):TR('다음 홀 ▶'))+'</button></div>'+
-    TR('<div class="row sb" style="margin-top:14px"><button class="xbtn" data-act="finish">지금까지 저장하고 종료</button>')+
+  out+=TR('<div class="row sb" style="margin-top:14px"><button class="xbtn" data-act="finish">지금까지 저장하고 종료</button>')+
     TR('<button class="xbtn" data-act="cancelRound">라운드 삭제</button></div>');
   return out;
 }
@@ -827,6 +936,8 @@ function settingsBody(){
     TR('<label class="f">야외 고대비 모드 (햇빛 아래 잘 보이게)</label>')+ch('contrast',[['normal',TR('보통')],['high',TR('고대비')]])+
     TR('<label class="f">화면 테마</label>')+ch('theme',[['auto',TR('자동')],['light',TR('밝게')],['dark',TR('어둡게')]])+
     TR('<label class="f">라운드 중 화면 꺼짐 방지</label>')+ch('wake',[[true,TR('켜기')],[false,TR('끄기')]])+
+    TR('<label class="f">축하 효과 (파 이하 기록 시 꽃가루·불꽃)</label>')+ch('fx',[[true,TR('켜기')],[false,TR('끄기')]])+
+
     TR('<label class="f">기본 통화 (내기)</label>')+ch('cur',[['IDR',TR('루피아')],['KRW',TR('원')],['JPY',TR('엔')]])+
     TR('<label class="f">아래 탭 올리기 (화면 아래 배지가 탭을 가릴 때)</label>')+ch('badgeGap',[['auto',TR('자동')],['on',TR('올리기')],['off',TR('안 함')]])+
     TR('<p class="note" style="margin-top:14px">버전 ')+VERSION+' · '+(isStandalone()?TR('홈 화면 앱으로 실행 중'):TR('브라우저에서 실행 중'))+TR(' · 저장공간 ')+(S.set.persisted?TR('영구 보관'):TR('일반'))+'</p>'+
@@ -856,6 +967,7 @@ function render(){
       mo.btns.map(function(b,i){ return '<button class="btn '+(b.cls||'')+' grow" data-act="modal" data-i="'+i+'">'+esc(b.label)+'</button>'; }).join('')+'</div></div></div>';
   } else { mr.innerHTML=''; }
   $('#subTitle').textContent=S.current?(TR('진행 중: ')+S.current.courseName):TR('홀 종료 시마다 기록 · 자동 저장');
+  renderDock();
   syncWake();
 }
 function openModal(title,body,btns){ modalCbs=btns.map(function(b){ return b.fn; }); UI.modal={title:title,body:body,btns:btns}; render(); }
@@ -1219,20 +1331,46 @@ function onClick(e){
     if(sc!=null&&r.putts[p][h]!=null&&r.putts[p][h]>sc){ r.putts[p][h]=sc; }
     var u0=r.undo[r.undo.length-1];
     if(u0&&JSON.stringify([u0.s,u0.pt,u0.f,u0.pn])===JSON.stringify([r.scores.map(function(x){return x[h];}),r.putts.map(function(x){return x[h];}),r.fir[h],r.pen[h]])){ r.undo.pop(); }
-    buzz(); save(); render(); return;
+    buzz(); save(); render();
+    if(a==='inc'||a==='chip'){ queueFx(r,p,h,a==='inc'?800:60); }
+    return;
   }
   if(r&&a==='undo'){ undo(r); return; }
   if(a==='gp'){ UI.gp=parseInt(el.getAttribute('data-v'),10)||0; render(); return; }
-  if(r&&a==='goto'){ r.idx=parseInt(el.getAttribute('data-i'),10); save(); render(); window.scrollTo(0,0); return; }
+  if(r&&a==='goto'){ gotoIdx(r,parseInt(el.getAttribute('data-i'),10)); return; }
+  if(r&&a==='holePop'){
+    var gi=parseInt(el.getAttribute('data-i'),10), gpp=(UI.gp!=null&&UI.gp<r.players.length)?UI.gp:0, hq=r.order[gi];
+    var prevH=(gi!==r.idx)?r.order[r.idx]:null;
+    if(prevH!=null){ r.idx=gi; save(); }   /* 누른 홀을 현재 홀로 선택 */
+    UI.pop={i:gi,p:gpp};
+    openModal(r.labels[hq]+TR('번 홀')+' · PAR '+r.par[hq]+(r.players.length>1?' · '+r.players[gpp]:''), holePopBody,
+      [{label:TR('닫기'),fn:function(){ UI.pop=null; }}]);
+    if(prevH!=null){ cheerHole(r,prevH,true); }
+    return;
+  }
+  if(r&&UI.pop&&(a==='pinc'||a==='pchip'||a==='pclear')){
+    var hp=r.order[UI.pop.i], pp=UI.pop.p, parp=r.par[hp], cv=r.scores[pp][hp];
+    snap(r,hp);
+    if(a==='pinc'){ r.scores[pp][hp]=(cv==null)?parp:Math.max(1,Math.min(20,cv+parseInt(el.getAttribute('data-d'),10))); }
+    else if(a==='pchip'){ var po=el.getAttribute('data-off'); r.scores[pp][hp]=(po==='dp')?Math.min(20,parp*2):Math.max(1,parp+parseInt(po,10)); }
+    else { r.scores[pp][hp]=null; r.putts[pp][hp]=null; }
+    if(r.putts[pp][hp]!=null&&r.scores[pp][hp]!=null&&r.putts[pp][hp]>r.scores[pp][hp]){ r.putts[pp][hp]=r.scores[pp][hp]; }
+    buzz(); save();
+    if(a==='pinc'){ render(); } else { UI.pop=null; closeModal(); }
+    if(a!=='pclear'){ queueFx(r,pp,hp,a==='pinc'?800:60); }
+    return;
+  }
   if(r&&a==='prev'){ if(r.idx>0){ r.idx--; save(); render(); window.scrollTo(0,0); } return; }
   if(r&&a==='next'){
     var hh=r.order[r.idx], miss=[];
     for(var q=0;q<r.players.length;q++){ if(r.scores[q][hh]==null){ miss.push(r.players[q]); } }
     if(miss.length){ toast(TR('점수 미입력: ')+miss.join(', ')); }
+    cheerHole(r,hh,!miss.length);
     if(r.idx<r.order.length-1){ r.idx++; }
     save(); render(); window.scrollTo(0,0); return;
   }
   if(r&&a==='finish'){
+    if(el.getAttribute('data-cheer')){ cheerHole(r,r.order[r.idx],true); }
     openModal(TR('라운드 종료'),TR('<p>현재까지 입력한 점수로 라운드를 저장하고 종료할까요?</p>'),[{label:TR('계속 입력'),cls:'ghost'},{label:TR('저장하고 종료'),fn:finishRound}]); return;
   }
   if(r&&a==='cancelRound'){
@@ -1435,7 +1573,7 @@ document.addEventListener('touchend',function(e){
 document.addEventListener('gesturestart',function(e){ if(!(e.target.closest&&e.target.closest('#mapFull'))){ e.preventDefault(); } },{passive:false});
 
 /* ================= 호스팅 배지 감지 ================= */
-var OWN={langPick:1,updBar:1,installBar:1,main:1,tabs:1,mapFull:1,iosGuide:1,modalRoot:1,toast:1,fileIn:1};
+var OWN={fxCanvas:1,fxBanner:1,actBar:1,langPick:1,updBar:1,installBar:1,main:1,tabs:1,mapFull:1,iosGuide:1,modalRoot:1,toast:1,fileIn:1};
 function checkBadge(){
   var found=false;
   Array.prototype.forEach.call(document.body.children,function(el){

@@ -115,10 +115,24 @@ textarea{min-height:80px;resize:vertical}
 .gpsel{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px}
 .gpsel .chip{padding:7px 16px}
 .hsum{display:flex;align-items:center;gap:12px;margin-top:10px;padding:8px 12px;background:var(--bg);border-radius:14px}
-.hsum .big{font-size:34px;font-weight:800;line-height:1;min-width:64px;text-align:center}
+.hsum .big{font-size:40px;font-weight:800;line-height:1;min-width:64px;text-align:center}
 .hsum .big.under{color:var(--r-e)}.hsum .big.even{color:var(--acc)}.hsum .big.over{color:var(--r-d)}
-.hsum .txt{font-size:15px;line-height:1.4}
-.hsum .txt span{font-size:13px;color:var(--mute)}
+.hsum .txt{min-width:0;flex:1}
+.hsum .l1{font-size:17px;color:var(--mute);line-height:1.2;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 2px}
+.hsum .l1 b{font-size:26px;font-weight:800;color:var(--ink);margin-right:1px}
+.hsum .l1 b.sm{font-size:18px}
+.hsum .l1 .dv{margin:0 7px;color:var(--line);font-weight:700}
+.hsum .cnts{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.hsum .cc{font-size:14px;font-weight:700;padding:3px 9px;border-radius:999px;line-height:1.3}
+.hsum .cc b{font-size:16px;font-weight:800}
+.hsum .cc.r-e{background:var(--r-e);color:var(--r-ek)}.hsum .cc.r-b{background:var(--r-b);color:var(--r-bk)}.hsum .cc.r-p{background:var(--r-p);color:var(--r-pk)}.hsum .cc.r-g{background:var(--r-g);color:var(--r-gk)}.hsum .cc.r-d{background:var(--r-d);color:var(--r-dk)}
+.hsum .hint{font-size:14px;color:var(--mute);margin-top:4px}
+/* 하단 고정 이전/다음 */
+#actBar{display:none;position:fixed;left:0;right:0;z-index:6;grid-template-columns:1fr 2fr;gap:10px;padding:8px 12px;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -4px 12px rgba(0,0,0,.06)}
+#actBar .btn{min-height:54px;font-size:18px;display:flex;align-items:center;justify-content:center;gap:8px}
+#actBar .btn small{font-size:13px;font-weight:600;opacity:.8}
+body.dock main{padding-bottom:calc(var(--dock,140px) + 16px)}
+body.dock #toast{bottom:calc(var(--dock,140px) + 10px)}
 .hgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
 .ht{position:relative;height:58px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 .ht .hl{position:absolute;left:7px;top:4px;font-size:13px;font-weight:800;opacity:.85}
@@ -162,7 +176,7 @@ textarea{min-height:80px;resize:vertical}
 .stepper .val{flex:1;text-align:center}
 .stepper .val .num{font-size:52px;font-weight:800;line-height:1}
 .stepper .val .lab{font-size:14px;font-weight:700;min-height:20px}
-.lab.e{color:#b58900}.lab.b{color:#d6453d}.lab.p{color:var(--acc)}.lab.g{color:#3a6fc0}.lab.d{color:#2b4f8a}
+.lab.e{color:var(--r-e)}.lab.b{color:var(--r-b)}.lab.p{color:var(--acc)}.lab.g{color:#b07d00}.lab.d{color:var(--r-d)}
 .g6{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .g6 .chip{padding:10px 0;text-align:center}
 .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
@@ -242,6 +256,24 @@ html.badge #toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .sheet .row.btns{margin-top:14px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));background:#222;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:70;max-width:90%;text-align:center}
 #toast.on{opacity:.95}
+/* 축하 효과 */
+#fxCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95;display:none}
+#fxBanner{position:fixed;left:50%;top:34%;transform:translate(-50%,-50%) scale(.6);z-index:96;pointer-events:none;text-align:center;opacity:0;
+  animation:fxIn .45s cubic-bezier(.2,1.6,.4,1) forwards;color:#fff;border-radius:22px;padding:14px 26px;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+#fxBanner b{display:block;font-weight:900;letter-spacing:.02em;line-height:1.1}
+#fxBanner .ic{display:block;line-height:1}
+#fxBanner small{display:block;font-size:14px;font-weight:700;opacity:.9;margin-bottom:2px}
+#fxBanner.t1{background:#1e7a40;padding:10px 22px}#fxBanner.t1 b{font-size:26px}#fxBanner.t1 .ic{font-size:26px}
+#fxBanner.t2{background:linear-gradient(135deg,#2563eb,#3b82f6)}#fxBanner.t2 b{font-size:36px}#fxBanner.t2 .ic{font-size:36px}
+#fxBanner.t3{background:linear-gradient(135deg,#1e3a8a,#7c3aed)}#fxBanner.t3 b{font-size:46px}#fxBanner.t3 .ic{font-size:46px}
+#fxBanner.t4{background:linear-gradient(135deg,#b8860b,#ffd700,#b8860b);color:#3a2500}#fxBanner.t4 b{font-size:52px}#fxBanner.t4 .ic{font-size:56px}
+#fxBanner.t3,#fxBanner.t4{animation:fxIn .5s cubic-bezier(.2,1.6,.4,1) forwards,fxPulse 1s .5s ease-in-out infinite}
+#fxBanner.out{animation:fxOut .4s ease forwards}
+@keyframes fxIn{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes fxPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.06)}}
+@keyframes fxOut{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-60%) scale(.9)}}
+@media (prefers-reduced-motion:reduce){#fxBanner,#fxBanner.t3,#fxBanner.t4{animation:none;opacity:1;transform:translate(-50%,-50%)}}
+#toast.top,body.dock #toast.top{bottom:auto;top:calc(14px + env(safe-area-inset-top,0px))}
 /* 아이폰 설치 안내 화살표 */
 #iosGuide{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.78);color:#fff;display:none;flex-direction:column;justify-content:flex-end;padding:20px 20px calc(24px + env(safe-area-inset-bottom,0px))}
 #iosGuide .box{background:#fff;color:#17251b;border-radius:18px;padding:16px;font-size:15px}
@@ -280,6 +312,7 @@ html.badge #toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 </div>
 <div id="iosGuide" data-act="iosGuideClose"></div>
 <div id="modalRoot"></div>
+<div id="actBar"></div>
 <div id="toast"></div>
 <input type="file" id="fileIn" accept=".json,application/json" style="display:none">
 <script src="leaflet.js"></script>

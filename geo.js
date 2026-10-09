@@ -1,7 +1,8 @@
 /* ============================================================
    골프 스코어 v2 - 지도/거리/온라인 코스 다운로드 (OpenStreetMap)
-   - 코스 검색: Nominatim(이름), Overpass(내 주변)
-   - 코스 다운로드: Overpass → 홀(파·핸디캡·홀 라인), 그린·벙커·해저드·페어웨이
+   - 코스 검색: 내장 목록(한국·동남아) + Nominatim·Photon(이름) + Overpass(내 주변)
+   - 코스 다운로드: Overpass → 홀(파·핸디캡·홀 라인), 그린·벙커·페널티구역(해저드)·페어웨이·티
+   - OSM 골프 태그(2019 룰 이후): golf=hole/green/tee/fairway/bunker/penalty_area(구 water_hazard)/pin
    - 홀 지도: SVG(오프라인 동작) / 위성지도: Leaflet + Esri World Imagery
    ============================================================ */
 var GEO = (function(){
@@ -10,6 +11,7 @@ var GEO = (function(){
 var OVERPASS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.osm.jp/api/interpreter',          /* 일본 미러: 아시아에서 빠름 */
   'https://overpass.private.coffee/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
 ];
@@ -244,6 +246,27 @@ function nominatim(q){
     return out;
   });
 }
+/* Photon(komoot) 지오코더: 오타·부분 일치에 강하고 제한이 느슨함 → Nominatim 보조 */
+function photon(q, pos){
+  var url='https://photon.komoot.io/api/?limit=20&q='+encodeURIComponent(q)+(pos?'&lat='+pos[0]+'&lon='+pos[1]:'');
+  return fetchT(url, {headers:{'Accept':'application/json'}}, 8000).then(function(r){
+    if(!r.ok){ throw new Error('HTTP '+r.status); }
+    return r.json();
+  }).then(function(j){
+    var out=[];
+    ((j&&j.features)||[]).forEach(function(f){
+      var p=f.properties||{}, c=f.geometry&&f.geometry.coordinates;
+      if(!c||p.osm_value!=='golf_course'){ return; }
+      if(p.osm_type!=='W'&&p.osm_type!=='R'){ return; }
+      var nm=p.name||''; if(!nm||NOT_COURSE.test(nm)){ return; }
+      var b=p.extent?{minlat:+p.extent[3],minlon:+p.extent[0],maxlat:+p.extent[1],maxlon:+p.extent[2]}:null;
+      if(b&&diagM(b)<350){ return; }
+      out.push({type:p.osm_type==='W'?'way':'relation', id:p.osm_id, name:nm, sub:[p.city,p.state,p.country].filter(Boolean).join(' · '),
+        lat:+c[1], lon:+c[0], bounds:b, size:diagM(b), dist:pos?dist(pos,[+c[1],+c[0]]):null, score:45});
+    });
+    return out;
+  });
+}
 /* 통합 검색: pos = 현재/마지막 위치(없으면 null)
    onPartial(list): 결과가 하나씩 도착할 때마다 바로 화면에 보여 주기 위한 콜백 */
 function search(q, pos, onStatus, onPartial){
@@ -258,6 +281,7 @@ function search(q, pos, onStatus, onPartial){
   }
   if(!isCho(q)){
     jobs.push(nominatim(q).then(add).catch(function(){}));
+    jobs.push(photon(q,pos).then(add).catch(function(){}));
     if(!hasHangul(q)){ jobs.push(nominatim(q+' golf').then(add).catch(function(){})); }
   }
   return Promise.all(jobs).then(function(){ publish(); return all.slice(0,30); });
@@ -299,8 +323,8 @@ function download(type, id, center, bounds, onStatus){
   var sel=type+'('+id+')';
   function run(b){
     var m=0.0015, bb=[b.minlat-m,b.minlon-m,b.maxlat+m,b.maxlon+m].map(function(v){ return v.toFixed(6); }).join(',');
-    var q='[out:json][timeout:40];(way["golf"]('+bb+');relation["golf"]('+bb+');node["golf"="pin"]('+bb+');way["natural"="water"]('+bb+');)->.f;.f out geom;'+sel+';out geom tags;';
-    return overpass(q, onStatus).then(function(j){ return parse(j.elements||[], type, id, center, b); });
+    var q='[out:json][timeout:40];(way["golf"]('+bb+');relation["golf"]('+bb+');node["golf"="pin"]('+bb+');way["natural"="water"]('+bb+');relation["natural"="water"]('+bb+');)->.f;.f out geom;'+sel+';out geom tags;';
+    return overpass(q, onStatus, 45000).then(function(j){ return parse(j.elements||[], type, id, center, b); });
   }
   if(bounds){ return run(bounds); }
   /* 범위를 모르면 먼저 코스 범위만 조회 */
@@ -328,7 +352,7 @@ function refOf(tags){
   if(!m && tags.name){ m=(tags.name+'').match(/(\d+)/); }
   return m?parseInt(m[1]||m[0],10):null;
 }
-var FT={bunker:'b', water_hazard:'w', lateral_water_hazard:'w', fairway:'f', green:'g', tee:'t'};
+var FT={bunker:'b', water_hazard:'w', lateral_water_hazard:'w', penalty_area:'w', fairway:'f', green:'g', tee:'t'};
 
 function parse(els, type, id, center, bnd){
   var info=null, holes=[], feats=[], pins=[], outline=[];
@@ -336,7 +360,7 @@ function parse(els, type, id, center, bnd){
     var t=e.tags||{};
     if(e.type===type && e.id===id){ info=e; outline=geomOf(e); return; }
     if(t.golf==='hole' && e.type==='way' && e.geometry){
-      holes.push({ref:refOf(t), par:parseInt(t.par,10)||null, si:parseInt(t.handicap,10)||null,
+      holes.push({ref:refOf(t), raw:(t.ref||'')+'', rawName:(t.name||'')+'', par:parseInt(t.par,10)||null, si:parseInt(t.handicap,10)||null,
         line:e.geometry.map(function(p){ return [r6(p.lat), r6(p.lon)]; }), name:t.name||''});
       return;
     }
@@ -359,6 +383,35 @@ function parse(els, type, id, center, bnd){
   if(!c && bnd){ c=[r6((bnd.minlat+bnd.maxlat)/2), r6((bnd.minlon+bnd.maxlon)/2)]; }
   if(!c && holes.length){ c=holes[0].line[0]; }
 
+  /* 홀 방향 확인: 선의 시작점이 그린 위에 있고 끝점은 아니면 반대로 그려진 홀 → 뒤집기 */
+  var greensAll=feats.filter(function(f){ return f.t==='g'; });
+  if(greensAll.length){
+    var gDist=function(p){ var bd=1e9; greensAll.forEach(function(g){ if(inPoly(p,g.g)){ bd=0; } else { bd=Math.min(bd,dist(p,centroid(g.g))); } }); return bd; };
+    holes.forEach(function(h){
+      if(h.line.length<2){ return; }
+      var dS=gDist(h.line[0]), dE=gDist(h.line[h.line.length-1]);
+      if(dS<70 && dS<dE-15){ h.line.reverse(); h.flipped=true; }
+    });
+  }
+  var nineNames=null;
+  /* 27·36홀에서 ref가 1~9로 겹치는 경우(OUT 1·IN 1, 東1·西1, A1·B1 …): 코스(9홀)별로 묶어 10~18, 19~27번으로 변환 */
+  (function(){
+    var cnt={}; holes.forEach(function(h){ if(h.ref!=null){ cnt[h.ref]=(cnt[h.ref]||0)+1; } });
+    if(!Object.keys(cnt).some(function(k){ return cnt[k]>1; })){ return; }
+    var span=0; holes.forEach(function(h){ if(h.ref!=null){ span=Math.max(span,h.ref); } });
+    if(span>9){ return; }
+    /* 그룹 이름: ref의 글자 부분("A1"→a), 없으면 name의 글자 부분("OUT 1"→out, "東1番"→東番) */
+    var strip=function(v){ return String(v||'').replace(/\d+/g,'').replace(/[\s\-_.#:()番]/g,'').toLowerCase(); };
+    var keyOf=function(h){ return strip(h.raw)||strip(h.rawName); };
+    var groups=[]; holes.forEach(function(h){ if(h.ref!=null){ var k=keyOf(h); if(groups.indexOf(k)<0){ groups.push(k); } } });
+    if(groups.length<2||groups.length>4){ return; }
+    var pr=function(k){ if(/^out|front|first|1st|^a$/.test(k)){ return 0; } if(/^in$|back|second|2nd|^b$/.test(k)){ return 1; } if(/east|東|^c$/.test(k)){ return 2; } if(/west|西|^d$/.test(k)){ return 3; } return 4; };
+    groups.sort(function(a,b){ return pr(a)-pr(b)||a.localeCompare(b); });
+    var labels={};
+    holes.forEach(function(h){ if(h.ref!=null){ var k=keyOf(h); h.ref+=groups.indexOf(k)*9;
+      if(!labels[k]){ labels[k]=String(strip(h.raw)?h.raw:h.rawName).replace(/\d+/g,'').replace(/[\s\-_.#:()番]+$/,'').replace(/^[\s\-_.#:()]+/,'').trim(); } } });
+    nineNames=groups.map(function(k){ return labels[k]||''; });
+  })();
   /* 홀 번호 정리 */
   var noRef = holes.filter(function(h){ return h.ref==null; }).length;
   if(noRef){ /* 번호 없는 홀은 뒤에 차례로 번호 부여 */
@@ -395,7 +448,7 @@ function parse(els, type, id, center, bnd){
     feats=feats.filter(function(f){ return f.g.some(function(p){ return p[0]>box[0]-m&&p[0]<box[2]+m&&p[1]>box[1]-m&&p[1]<box[3]+m; }); });
   }
   return {src:'osm', osmType:type, osmId:id, name:name, center:c, fetched:Date.now(), outline:polys.map(simplify),
-    holes:byRef, refs:Object.keys(byRef).map(Number).sort(function(a,b){return a-b;}), feats:feats, noRef:noRef};
+    holes:byRef, refs:Object.keys(byRef).map(Number).sort(function(a,b){return a-b;}), feats:feats, noRef:noRef, nineNames:nineNames};
 }
 
 /* 다운로드 결과 → 앱 코스 객체 */
@@ -422,7 +475,8 @@ function toCourse(g, idHint, nameHint){
         si9=si.map(function(v){ return srt.indexOf(v)+1; });
         if(new Set(si9).size!==9){ si9=null; }
       }
-      c.nines.push({k:NM.charAt(i), name:(i+1)+TR('코스 (')+(i*9+1)+'~'+(i*9+9)+TR('번)'), par:p, si9:si9, geoRefs:rs,
+      var lab=g.nineNames&&g.nineNames[i];
+      c.nines.push({k:NM.charAt(i), name:(lab?lab+' (':(i+1)+TR('코스 ('))+(i*9+1)+'~'+(i*9+9)+TR('번)'), par:p, si9:si9, geoRefs:rs,
         unverified: rs.some(function(r){ return !H(r)||H(r).parEst; })});
     }
     warn.push(k*9+TR('홀 골프장으로 받아 9홀 코스 ')+k+TR('개로 나눴습니다. 코스 이름은 실제 카드를 보고 확인해 주세요.'));

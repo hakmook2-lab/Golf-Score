@@ -3,7 +3,7 @@
    - 새 버전: 백그라운드로 받아 두고, 앱에서 [업데이트]를 누르면 적용
    - 위성사진 타일: 한 번 본 곳은 저장(최대 약 3,000장)
    ※ 앱 파일을 고치면 아래 VERSION 을 반드시 올려 주세요. */
-var VERSION='golfscore-v3.9.0';
+var VERSION='golfscore-v3.10.0';
 var TILE_CACHE='golfscore-tiles-v1';
 var FILES=['./','index.html','i18n.js','app.js','geo.js','data.js','courses-idx.js','manifest.webmanifest',
   'icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png',

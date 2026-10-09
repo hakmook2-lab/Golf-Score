@@ -172,7 +172,6 @@ var JA={
 "후반": "後半",
 "</div><div class=\"hleg\"><span><i class=\"r-e\"></i>이글+</span><span><i class=\"r-b\"></i>버디</span><span><i class=\"r-p\"></i>파</span><span><i class=\"r-g\"></i>보기</span><span><i class=\"r-d\"></i>더블+</span>": "</div><div class=\"hleg\"><span><i class=\"r-e\"></i>イーグル+</span><span><i class=\"r-b\"></i>バーディー</span><span><i class=\"r-p\"></i>パー</span><span><i class=\"r-g\"></i>ボギー</span><span><i class=\"r-d\"></i>ダボ+</span>",
 "<span><i class=\"dotm\"></i>동반자 미입력</span>": "<span><i class=\"dotm\"></i>同伴者未入力</span>",
-"\" data-act=\"mapToggle\">🗺 홀 지도</button>": "\" data-act=\"mapToggle\">🗺 ホール地図</button>",
 "<button class=\"iconbtn\" data-act=\"satHole\">🛰 위성지도</button>": "<button class=\"iconbtn\" data-act=\"satHole\">🛰 衛星地図</button>",
 ">↶ 실행취소</button></div>": ">↶ 元に戻す</button></div>",
 "<small>번 홀</small></div>": "<small>番ホール</small></div>",
@@ -480,7 +479,15 @@ var JA={
 "<label class=\"f\">점수 효과음 (파 이하 축하 · 보기 이상 웃긴 소리)</label>": "<label class=\"f\">スコア効果音 (パー以下はお祝い・ボギー以上はおもしろ音)</label>",
 "<label class=\"f\">라운드 시작·종료 음악</label>": "<label class=\"f\">ラウンド開始・終了の音楽</label>",
 "🎵 시작 음악": "🎵 開始の音楽",
-"🎵 종료 음악": "🎵 終了の音楽"
+"🎵 종료 음악": "🎵 終了の音楽",
+"\" data-act=\"mapToggle\">⛳ 홀 정보</button>": "\" data-act=\"mapToggle\">⛳ ホール情報</button>",
+"🔍 크게 보기": "🔍 拡大表示",
+"페어웨이": "フェアウェイ",
+"그린": "グリーン",
+"벙커": "バンカー",
+"해저드": "ハザード",
+"눈금: 그린 중앙까지 거리": "目盛: グリーン中央までの距離",
+"홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.": "ホール地図データがないため、パーと距離だけで描いた模式図です。バンカー・ハザード・ドッグレッグは表示されません。"
 };
 var EN={
 "블랙": "Black",
@@ -651,7 +658,6 @@ var EN={
 "후반": "Back",
 "</div><div class=\"hleg\"><span><i class=\"r-e\"></i>이글+</span><span><i class=\"r-b\"></i>버디</span><span><i class=\"r-p\"></i>파</span><span><i class=\"r-g\"></i>보기</span><span><i class=\"r-d\"></i>더블+</span>": "</div><div class=\"hleg\"><span><i class=\"r-e\"></i>Eagle+</span><span><i class=\"r-b\"></i>Birdie</span><span><i class=\"r-p\"></i>Par</span><span><i class=\"r-g\"></i>Bogey</span><span><i class=\"r-d\"></i>Double+</span>",
 "<span><i class=\"dotm\"></i>동반자 미입력</span>": "<span><i class=\"dotm\"></i>Partner not entered</span>",
-"\" data-act=\"mapToggle\">🗺 홀 지도</button>": "\" data-act=\"mapToggle\">🗺 Hole map</button>",
 "<button class=\"iconbtn\" data-act=\"satHole\">🛰 위성지도</button>": "<button class=\"iconbtn\" data-act=\"satHole\">🛰 Satellite</button>",
 ">↶ 실행취소</button></div>": ">↶ Undo</button></div>",
 "<small>번 홀</small></div>": "</div>",
@@ -959,7 +965,15 @@ var EN={
 "<label class=\"f\">점수 효과음 (파 이하 축하 · 보기 이상 웃긴 소리)</label>": "<label class=\"f\">Score sounds (cheers for par or better · funny sounds for bogey or worse)</label>",
 "<label class=\"f\">라운드 시작·종료 음악</label>": "<label class=\"f\">Round start / finish music</label>",
 "🎵 시작 음악": "🎵 Start music",
-"🎵 종료 음악": "🎵 Finish music"
+"🎵 종료 음악": "🎵 Finish music",
+"\" data-act=\"mapToggle\">⛳ 홀 정보</button>": "\" data-act=\"mapToggle\">⛳ Hole info</button>",
+"🔍 크게 보기": "🔍 Enlarge",
+"페어웨이": "Fairway",
+"그린": "Green",
+"벙커": "Bunker",
+"해저드": "Hazard",
+"눈금: 그린 중앙까지 거리": "Ticks: distance to green center",
+"홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.": "No hole map data, so this is a schematic drawn from par and yardage only. Bunkers, hazards and doglegs are not shown."
 };
 var I18N=(function(){
   var KEY='golfscore.lang', lang=null, asked=false, LANGS=['ko','ja','en'];

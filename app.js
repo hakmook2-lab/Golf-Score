@@ -3,7 +3,7 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.10.0';
+var VERSION='3.11.0';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
@@ -587,14 +587,25 @@ function distHtml(r){
   return '<div class="dist"><div><b>'+GEO.fmtD(t.f,u)+TR('</b><span>앞</span></div><div><b>')+GEO.fmtD(t.c,u)+TR('</b><span>그린 중앙 (')+unitName()+')</span></div><div><b>'+GEO.fmtD(t.b,u)+TR('</b><span>뒤</span></div></div>')+
     TR('<div class="note" style="text-align:center;margin-top:4px">GPS 오차 약 ±')+Math.round(GEO.toM(UI.acc||0,u))+unitName()+(pin?TR(' · 직접 지정한 그린 위치 기준 <button class="xbtn" data-act="pinHere">현재 위치로 다시 저장</button>'):'')+'</div>';
 }
-function holeMapInner(r){
-  var h=r.order[r.idx], g=geoOf(r), ref=refOf(r,h);
-  if(!g||!g.holes||!g.holes[ref]){ return ''; }
-  var res=GEO.holeSVG(g, ref, {unit:S.set.unit, pos:UI.pos, pin:pinOf(r.courseId,ref)});
-  if(!res){ return ''; }
-  UI.holeMeta=res.meta;
-  return '<div class="holemap">'+res.svg+TR('<div class="lg"><span style="color:var(--fair)">■</span>페어웨이 <span style="color:var(--sand)">■</span>벙커 <span style="color:var(--water)">■</span>해저드 · 점선 원: 그린까지 100/150/200')+unitName()+'</div><div class="tapinfo" id="tapInfo"></div></div>'+
-    TR('<div class="note" style="margin-top:4px">지도를 누르면 그 지점까지 거리가 나옵니다. 지도: © OpenStreetMap 기여자</div>');
+function holeMapInner(r){ return holeSignHtml(r,false); }
+/* 홀 정보 팻말: 상단(홀·파·HCP·티별 거리) + 그림 + 범례 */
+function holeSignHtml(r,big){
+  var h=r.order[r.idx], g=geoOf(r), ref=refOf(r,h), gh=g&&g.holes?g.holes[ref]:null;
+  var yd={}; ['black','blue','white','red'].forEach(function(k){ if(r.yd&&r.yd[k]&&r.yd[k][h]){ yd[k]=r.yd[k][h]; } });
+  var mapY=r.yd&&r.yd.map?r.yd.map[h]:null, tee=r.tee||'white';
+  var res=GEO.signSVG({geo:g, hole:gh, par:r.par[h], yd:yd, mapYd:mapY, tee:tee, unit:S.set.unit, pos:UI.pos, pin:pinOf(r.courseId,ref), big:!!big, noTap:!!big});
+  if(!big){ UI.holeMeta=res.meta; }
+  var chips=['black','blue','white','red'].filter(function(k){ return yd[k]; }).map(function(k){ return '<span class="tc '+k+(k===tee?' on':'')+'"><i></i>'+yd[k]+'<small>y</small></span>'; }).join('');
+  if(!chips&&mapY){ chips='<span class="tc map"><i></i>'+mapY+'<small>y</small></span>'; }
+  var u=unitName();
+  var leg='<span><i style="background:#8ccb67"></i>'+TR('페어웨이')+'</span><span><i style="background:#d2f0bb"></i>'+TR('그린')+'</span>'+
+    (gh?'<span><i style="background:#f3e5b0"></i>'+TR('벙커')+'</span><span><i style="background:#5fa9e6"></i>'+TR('해저드')+'</span>':'')+
+    '<span><i style="background:#fff;border:1px solid #999"></i>'+TR('눈금: 그린 중앙까지 거리')+' ('+u+')</span>';
+  return '<div class="sign'+(big?' big':'')+'"><div class="sh"><div class="hn">'+esc(r.labels[h])+'</div><div class="hp">PAR <b>'+r.par[h]+'</b>'+(r.si&&r.si[h]?' · HCP <b>'+r.si[h]+'</b>':'')+'</div><div class="tcs">'+chips+'</div></div>'+
+    '<div class="holemap">'+res.svg+(gh&&!big?'<div class="tapinfo" id="tapInfo"></div>':'')+'</div>'+
+    '<div class="sl">'+leg+'</div>'+
+    (gh?(big?'':TR('<div class="note" style="margin-top:4px">지도를 누르면 그 지점까지 거리가 나옵니다. 지도: © OpenStreetMap 기여자</div>')):'<div class="note" style="margin-top:4px">'+TR('홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.')+'</div>')+
+    (big?'':'<button class="btn ghost block sm" style="margin-top:8px" data-act="signBig">'+TR('🔍 크게 보기')+'</button>')+'</div>';
 }
 function yardText(r,h){
   if(!r.yd){ return ''; }
@@ -755,7 +766,7 @@ function vHole(r){
   var dots=holeGrid(r);
   var g=geoOf(r), gh=geoHole(r,h);
   var tools='<div class="toolrow">'+
-    (gh?'<button class="iconbtn'+(S.set.mapOn?' on':'')+TR('" data-act="mapToggle">🗺 홀 지도</button>'):'')+
+    '<button class="iconbtn'+(S.set.mapOn?' on':'')+TR('" data-act="mapToggle">⛳ 홀 정보</button>')+
     TR('<button class="iconbtn" data-act="satHole">🛰 위성지도</button>')+
     '<button class="iconbtn'+(watchId!=null?' on':'')+'" data-act="gpsToggle">📍 GPS</button>'+
     '<button class="iconbtn" data-act="undo"'+(r.undo&&r.undo.length?'':' disabled style="opacity:.4"')+TR('>↶ 실행취소</button></div>');
@@ -765,7 +776,7 @@ function vHole(r){
     '<div class="no">'+(yt?yt+' · ':(teeLabel(r)?teeLabel(r)+' · ':''))+(r.idx+1)+' / '+N+'</div></div></div>'+
     dots+tools+
     '<div id="distPanel">'+distHtml(r)+'</div>'+
-    (gh&&S.set.mapOn?'<div id="holeMapBox">'+holeMapInner(r)+'</div>':'')+
+    (S.set.mapOn?'<div id="holeMapBox">'+holeMapInner(r)+'</div>':'')+
     (!g?TR('<button class="btn ghost block sm" style="margin-top:10px" data-act="geoGetRound">🗺 이 코스 홀 지도 받기 (현재 지도 없음)</button>'):'')+
     '</div>';
   for(var p=0;p<r.players.length;p++){
@@ -1541,6 +1552,7 @@ function onClick(e){
   }
   /* 지도 / GPS */
   if(a==='gpsToggle'){ if(watchId!=null){ gpsOff(); toast(TR('GPS를 껐어요')); } else { gpsOn(); toast(TR('GPS 켜는 중… (처음엔 위치 권한을 허용해 주세요)'),2600); } render(); return; }
+  if(a==='signBig'&&r){ openModal(holeName(r.labels[r.order[r.idx]])+' · PAR '+r.par[r.order[r.idx]], function(){ return holeSignHtml(S.current,true); }, [{label:TR('닫기')}]); return; }
   if(a==='mapToggle'){ S.set.mapOn=!S.set.mapOn; save(); render(); return; }
   if(a==='satHole'&&r){
     var h2=r.order[r.idx], ref=refOf(r,h2), g=geoOf(r), c=courseOf(r.courseId);

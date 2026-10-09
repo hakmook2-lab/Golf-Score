@@ -497,7 +497,13 @@ var JA={
 "이 홀 주변 벙커·해저드가 지도에 등록되어 있지 않습니다.": "このホール周辺のバンカー・ハザードは地図に登録されていません。",
 " · 지도: © OpenStreetMap 기여자": " ・地図: © OpenStreetMap contributors",
 "<div class=\"infobox\" style=\"margin-top:10px\"><span class=\"spin\"></span> 홀 지도 받는 중… (기다리지 않고 라운드를 시작해도 됩니다)</div>": "<div class=\"infobox\" style=\"margin-top:10px\"><span class=\"spin\"></span> ホール地図を取得中…(待たずにラウンドを始めても大丈夫です)</div>",
-"<div class=\"note\" style=\"margin-top:10px\">공개 지도에서 이 코스의 홀 지도를 자동으로 찾지 못했습니다. 아래 버튼으로 직접 찾아 받을 수 있습니다.</div>": "<div class=\"note\" style=\"margin-top:10px\">公開地図からこのコースのホール地図を自動で見つけられませんでした。下のボタンで手動で探して取得できます。</div>"
+"<div class=\"note\" style=\"margin-top:10px\">공개 지도에서 이 코스의 홀 지도를 자동으로 찾지 못했습니다. 아래 버튼으로 직접 찾아 받을 수 있습니다.</div>": "<div class=\"note\" style=\"margin-top:10px\">公開地図からこのコースのホール地図を自動で見つけられませんでした。下のボタンで手動で探して取得できます。</div>",
+"진행 중인 라운드가 있습니다": "進行中のラウンドがあります",
+"홀 입력</p>": "ホール入力済み</p>",
+"<p class=\"note\">새 라운드(": "<p class=\"note\">新しいラウンド(",
+")를 시작하려면 지금 라운드를 먼저 저장하거나 삭제해야 합니다.</p>": ")を始めるには、今のラウンドを先に保存または削除する必要があります。</p>",
+"저장 후 새 라운드": "保存して新ラウンド",
+"삭제 후 새 라운드": "削除して新ラウンド"
 };
 var EN={
 "블랙": "Black",
@@ -993,7 +999,13 @@ var EN={
 "이 홀 주변 벙커·해저드가 지도에 등록되어 있지 않습니다.": "No bunkers or hazards are mapped near this hole.",
 " · 지도: © OpenStreetMap 기여자": " · Map: © OpenStreetMap contributors",
 "<div class=\"infobox\" style=\"margin-top:10px\"><span class=\"spin\"></span> 홀 지도 받는 중… (기다리지 않고 라운드를 시작해도 됩니다)</div>": "<div class=\"infobox\" style=\"margin-top:10px\"><span class=\"spin\"></span> Getting hole map… (you can start the round without waiting)</div>",
-"<div class=\"note\" style=\"margin-top:10px\">공개 지도에서 이 코스의 홀 지도를 자동으로 찾지 못했습니다. 아래 버튼으로 직접 찾아 받을 수 있습니다.</div>": "<div class=\"note\" style=\"margin-top:10px\">The hole map for this course could not be found automatically on the open map. You can search and download it with the button below.</div>"
+"<div class=\"note\" style=\"margin-top:10px\">공개 지도에서 이 코스의 홀 지도를 자동으로 찾지 못했습니다. 아래 버튼으로 직접 찾아 받을 수 있습니다.</div>": "<div class=\"note\" style=\"margin-top:10px\">The hole map for this course could not be found automatically on the open map. You can search and download it with the button below.</div>",
+"진행 중인 라운드가 있습니다": "A round is in progress",
+"홀 입력</p>": " holes entered</p>",
+"<p class=\"note\">새 라운드(": "<p class=\"note\">To start a new round (",
+")를 시작하려면 지금 라운드를 먼저 저장하거나 삭제해야 합니다.</p>": "), save or delete the current round first.</p>",
+"저장 후 새 라운드": "Save, then new round",
+"삭제 후 새 라운드": "Delete, then new round"
 };
 var I18N=(function(){
   var KEY='golfscore.lang', lang=null, asked=false, LANGS=['ko','ja','en'];

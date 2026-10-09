@@ -3,7 +3,7 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.12.0';
+var VERSION='3.12.1';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
@@ -1251,15 +1251,39 @@ function undo(r){
   r.fir[u.h]=u.f; r.pen[u.h]=u.pn; r.idx=r.order.indexOf(u.h); if(r.idx<0){ r.idx=u.idx; }
   save(); render(); toast(TR('되돌렸어요'));
 }
-function finishRound(){
-  var r=S.current, any=false;
+/* 진행 중 라운드를 기록에 저장하고 비움. 점수가 하나도 없으면 저장 없이 비움. 반환: 저장 여부 */
+function archiveCurrent(){
+  var r=S.current, any=false; if(!r){ return false; }
   for(var p=0;p<r.players.length;p++){ if(stats(r,p).n>0){ any=true; } }
-  if(!any){ toast(TR('입력된 점수가 없어 저장하지 않았어요')); S.current=null; UI.setup=null; save(); render(); return; }
+  if(!any){ S.current=null; UI.setup=null; save(); return false; }
   var cnt=0;
   r.order.forEach(function(h){ var full=true; for(var q=0;q<r.players.length;q++){ if(r.scores[q][h]==null){ full=false; } } if(full){ cnt++; } });
   r.partial=cnt<r.order.length; r.finished=true; r.endedAt=Date.now(); r.undo=[];
-  S.rounds.unshift(r); S.current=null; UI.setup=null; UI.openHist=r.id;
-  save(); UI.tab='history'; render(); window.scrollTo(0,0); toast(TR('라운드가 저장되었어요'));
+  S.rounds.unshift(r); S.current=null; UI.setup=null; UI.openHist=r.id; save();
+  return true;
+}
+/* 코스 화면·검색에서 [이 코스로 라운드 시작]: 진행 중 라운드가 있으면 저장/삭제를 먼저 묻고 새 라운드 설정으로 */
+function startWithCourse(id){
+  var c=courseOf(id); if(!c){ return; }
+  var proceed=function(){
+    initSetup(); UI.setup.courseId=c.id;
+    if(c.nines){ UI.setup.front=c.nines[0].k; UI.setup.back=(c.nines[1]||c.nines[0]).k; }
+    UI.tab='round'; render(); window.scrollTo(0,0);
+  };
+  var r=S.current;
+  if(!r){ proceed(); return; }
+  var n=0; r.order.forEach(function(h){ if(r.scores[0][h]!=null){ n++; } });
+  openModal(TR('진행 중인 라운드가 있습니다'),
+    '<p><b>'+esc(r.courseName)+'</b> · '+esc(r.date)+' · '+n+'/'+r.order.length+TR('홀 입력</p>')+
+    TR('<p class="note">새 라운드(')+esc(c.name)+TR(')를 시작하려면 지금 라운드를 먼저 저장하거나 삭제해야 합니다.</p>'),
+    [{label:TR('취소'),cls:'ghost'},
+     {label:TR('저장 후 새 라운드'),fn:function(){ var saved=archiveCurrent(); toast(saved?TR('라운드가 저장되었어요'):TR('입력된 점수가 없어 저장하지 않았어요')); proceed(); }},
+     {label:TR('삭제 후 새 라운드'),cls:'danger',fn:function(){ S.current=null; UI.setup=null; save(); proceed(); }}]);
+}
+function finishRound(){
+  var r=S.current;
+  if(!archiveCurrent()){ toast(TR('입력된 점수가 없어 저장하지 않았어요')); render(); return; }
+  UI.tab='history'; render(); window.scrollTo(0,0); toast(TR('라운드가 저장되었어요'));
   bgm('end');
   if(S.rounds.length-(S.set.backupCount||0)>=3){
     setTimeout(function(){
@@ -1476,7 +1500,7 @@ function pickResult(x){
   UI.search={}; UI.openCourse=id; UI.tab='courses'; window.scrollTo(0,0);
   bgDownload(id, x);
   UI._qp='';
-  var startFn=function(){ initSetup(); UI.setup.courseId=id; if(c.nines){ UI.setup.front=c.nines[0].k; UI.setup.back=(c.nines[1]||c.nines[0]).k; } go('round'); };
+  var startFn=function(){ startWithCourse(id); };
   openModal(TR('코스를 추가했습니다'),'<p><b>'+esc(c.name)+'</b></p>'+
     TR('<p class="note">홀 지도·홀별 파는 뒤에서 받고 있습니다. 기다리지 않고 바로 시작해도 됩니다. (한국 골프장은 대부분 공개 지도에 홀 정보가 없습니다)</p>')+
     TR('<p style="margin-top:10px"><b>스코어카드의 파 18개</b>를 알면 넣어 주세요 (선택)</p>')+
@@ -1727,10 +1751,7 @@ function onClick(e){
     S.pars[pk]=arr2; save(); render(); toast(TR('파 정보를 저장했어요 (합계 ')+sum(arr2)+')'); return;
   }
   if(a==='resetPar'){ delete S.pars[el.getAttribute('data-key')]; save(); render(); toast(TR('원래 값으로 복원했어요')); return; }
-  if(a==='useCourse'){
-    initSetup(); var uc=courseOf(UI.openCourse); UI.setup.courseId=uc.id;
-    if(uc.nines){ UI.setup.front=uc.nines[0].k; UI.setup.back=(uc.nines[1]||uc.nines[0]).k; }
-    UI.tab='round'; render(); window.scrollTo(0,0); return;
+  if(a==='useCourse'){ startWithCourse(UI.openCourse); return;
   }
   if(a==='rename'){ var rc2=courseOf(UI.openCourse), nn=($('#renameIn').value||'').trim(); if(rc2&&nn){ rc2.name=nn; save(); render(); toast(TR('이름을 바꿨어요')); } return; }
   if(a==='addCourse'){

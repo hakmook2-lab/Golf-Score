@@ -3,12 +3,12 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.8.0';
+var VERSION='3.9.0';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
 var S={ver:2,current:null,rounds:[],pars:{},custom:[],names:[],hcps:[],lastCourse:null,lastN:1,greens:{},
-  set:{unit:'yd',contrast:'normal',theme:'auto',wake:true,voice:true,fx:true,vib:true,snd:true,cur:'IDR',hideInstall:false,lastBackup:0,backupCount:0,gps:false,mapOn:true,me:'',badgeGap:'auto'}};
+  set:{unit:'yd',contrast:'normal',theme:'auto',wake:true,voice:true,fx:true,vib:true,snd:true,bgm:true,cur:'IDR',hideInstall:false,lastBackup:0,backupCount:0,gps:false,mapOn:true,me:'',badgeGap:'auto'}};
 var UI={tab:'round',setup:null,openHist:null,openCourse:null,modal:null,pos:null,acc:null,search:null,dl:null,statP:'all',tap:null,gp:0};
 var modalCbs=[];
 
@@ -62,15 +62,15 @@ function num(s){ var d=String(s||'').replace(/[^0-9]/g,''); return d?parseInt(d,
 /* ================= 축하 효과 (파 이하) ================= */
 /* 단계: 1 파 → 작은 꽃가루 / 2 버디 → 양쪽 꽃가루 대포 / 3 이글 → 불꽃놀이 / 4 알바트로스·홀인원 → 대형 불꽃 + 금빛 비 */
 var FX={timer:null, raf:null, cv:null, parts:[], rockets:[], until:0};
-function fxTier(s,par){ if(s==null){ return 0; } var d=s-par; if(s===1||d<=-3){ return 4; } if(d===-2){ return 3; } if(d===-1){ return 2; } if(d===0){ return 1; } return 0; }
+function fxTier(s,par){ if(s==null){ return 0; } var d=s-par; if(s===1||d<=-3){ return 4; } if(d===-2){ return 3; } if(d===-1){ return 2; } if(d===0){ return 1; } if(d===1){ return -1; } if(d===2){ return -2; } return -3; }
 function queueFx(r,p,h,delay){
   clearTimeout(FX.timer);
   var run=function(){
-    if(S.set.fx===false){ return; }
     var s=r.scores[p]&&r.scores[p][h]; var t=fxTier(s,r.par[h]); if(!t){ return; }
     if(!r.fx){ r.fx={}; }
     var k=p+'-'+h; if(r.fx[k]===s){ return; }   /* 같은 홀·같은 점수는 한 번만 */
     r.fx[k]=s; save();
+    if(t<0){ sfxBad(t); return; }   /* 보기 이상: 웃긴 효과음만 */
     celebrate(t, relName(s-r.par[h],s,r.par[h]), r.players.length>1?r.players[p]:'');
   };
   /* 원터치 버튼은 바로 실행(아이폰 진동은 누른 순간에만 허용됨), ± 버튼은 손을 멈춘 뒤 실행 */
@@ -155,10 +155,66 @@ function sfx(tier){
     for(i=0;i<12;i++){ sPop(c,t+0.9+i*0.17,0.4); }
   }
 }
+/* ================= 보기 이상: 기어들어가는 웃긴 소리 ================= */
+function sBrass(c,t,f,d,vol,f2,vib){   /* 트롬본 비슷한 소리: 톱니파 + 저역 필터 (+ 떨림) */
+  var o=c.createOscillator(), fl=c.createBiquadFilter(), g=c.createGain();
+  o.type='sawtooth'; o.frequency.setValueAtTime(f,t);
+  if(f2){ o.frequency.setValueAtTime(f,t+d*0.55); o.frequency.exponentialRampToValueAtTime(f2,t+d); }
+  fl.type='lowpass'; fl.frequency.setValueAtTime(900,t); fl.frequency.exponentialRampToValueAtTime(500,t+d); fl.Q.value=4;
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.04); g.gain.setValueAtTime(vol,t+d*0.7); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  if(vib){ var l=c.createOscillator(), lg=c.createGain(); l.frequency.value=6; lg.gain.value=f*0.03; l.connect(lg); lg.connect(o.frequency); l.start(t+d*0.3); l.stop(t+d+0.05); }
+  o.connect(fl); fl.connect(g); g.connect(c.__out); o.start(t); o.stop(t+d+0.05);
+}
+function sfxBad(tier){   /* -1 보기 / -2 더블 / -3 트리플 이상 */
+  if(S.set.snd===false){ return; }
+  var c=audioCtx(); if(!c){ return; }
+  var t=c.currentTime+0.02;
+  if(tier===-1){        /* 보기: "뿌-우~" 살짝 김빠지는 두 음 */
+    sBrass(c,t,233.08,0.28,0.22); sBrass(c,t+0.3,220,0.55,0.22,185);
+  } else if(tier===-2){ /* 더블: "뿌 뿌 뿌 뿌우~~" 슬픈 트롬본 */
+    [[233.08,0,0.32],[220,0.36,0.32],[207.65,0.72,0.32]].forEach(function(n){ sBrass(c,t+n[1],n[0],n[2],0.24); });
+    sBrass(c,t+1.08,196,1.3,0.26,0,true);
+  } else {              /* 트리플 이상: 미끄럼 휘슬 '쭈우욱~' + '뽀잉' + '쿵' */
+    sTone(c,t,1800,0.95,'sine',0.22,180);
+    var o=c.createOscillator(), g=c.createGain(); o.type='triangle';
+    o.frequency.setValueAtTime(320,t+1.0); o.frequency.exponentialRampToValueAtTime(90,t+1.35); o.frequency.exponentialRampToValueAtTime(140,t+1.5); o.frequency.exponentialRampToValueAtTime(70,t+1.75);
+    g.gain.setValueAtTime(0.0001,t+1.0); g.gain.exponentialRampToValueAtTime(0.4,t+1.02); g.gain.exponentialRampToValueAtTime(0.0001,t+1.8);
+    o.connect(g); g.connect(c.__out); o.start(t+1.0); o.stop(t+1.85);
+    sNoise(c,t+1.0,0.35,0.5,120,0.7);
+  }
+}
+/* ================= 라운드 시작·종료 음악 (직접 작곡·합성) ================= */
+function mf(m){ return 440*Math.pow(2,(m-69)/12); }
+function sHat(c,t,v){ sNoise(c,t,0.05,v||0.08,8000,0.9); }
+function sKick(c,t,v){ var o=c.createOscillator(), g=c.createGain(); o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(45,t+0.12); g.gain.setValueAtTime(v||0.5,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.18); o.connect(g); g.connect(c.__out); o.start(t); o.stop(t+0.2); }
+/* 노트: [시작(8분음표 단위), 길이(8분음표), MIDI 번호] */
+var JINGLE={
+  start:{ e:0.21,
+    mel:[[0,1,67],[1,1,72],[2,1,76],[3,2,79],[5,1,76],[6,2,79],[8,1,81],[9,1,79],[10,1,77],[11,1,76],[12,1,74],[13,1,76],[14,2,77],[16,1,79],[17,1,81],[18,1,83],[19,5,84]],
+    bass:[[0,2,48],[2,2,55],[4,2,48],[6,2,55],[8,2,53],[10,2,57],[12,2,55],[14,2,59],[16,2,55],[18,2,55],[19,5,48]],
+    chord:[[0,4,[60,64,67]],[4,4,[60,64,67]],[8,4,[65,69,72]],[12,4,[67,71,74]],[16,3,[67,71,74]],[19,5,[60,64,67,72]]],
+    drums:24, cheer:false },
+  end:{ e:0.26,
+    mel:[[0,1,76],[1,1,74],[2,2,72],[4,1,69],[5,1,71],[6,2,72],[8,1,74],[9,1,76],[10,1,77],[11,1,79],[12,2,81],[14,1,79],[15,1,77],[16,1,76],[17,1,74],[18,6,72]],
+    bass:[[0,4,48],[4,4,53],[8,4,55],[12,4,53],[16,2,55],[18,6,48]],
+    chord:[[0,4,[64,67,72]],[4,4,[65,69,72]],[8,4,[67,71,74]],[12,4,[65,69,72]],[16,2,[67,71,74]],[18,6,[60,64,67,72]]],
+    drums:18, cheer:true }
+};
+function bgm(kind){
+  if(S.set.bgm===false){ return; }
+  var c=audioCtx(), J=JINGLE[kind]; if(!c||!J){ return; }
+  var t=c.currentTime+0.05, e=J.e;
+  J.mel.forEach(function(n){ sTone(c,t+n[0]*e,mf(n[2]),n[1]*e*0.95,'square',0.07); sTone(c,t+n[0]*e,mf(n[2]),n[1]*e,'triangle',0.16); });
+  J.bass.forEach(function(n){ sTone(c,t+n[0]*e,mf(n[2]),n[1]*e*0.9,'triangle',0.22); });
+  J.chord.forEach(function(n){ n[2].forEach(function(m){ sTone(c,t+n[0]*e,mf(m),n[1]*e,'sine',0.045); }); });
+  for(var i=0;i<J.drums;i++){ if(i%2===0){ sKick(c,t+i*e,0.35); } sHat(c,t+i*e+e/2,0.06); }
+  if(J.cheer){ sNoise(c,t+18*e,2.4,0.18,1400,0.4,0.5); for(var k=0;k<14;k++){ sNoise(c,t+18*e+k*0.12+Math.random()*0.05,0.04,0.12,2500,1.2); } }
+}
 function celebrate(tier,word,who){
   var reduce=false; try{ reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
   vibrate(tier);
   sfx(tier);
+  if(S.set.fx===false){ return; }
   fxBanner(tier,word,who);
   if(reduce){ return; }
   var cv=FX.cv;
@@ -1021,7 +1077,9 @@ function settingsBody(){
     TR('<label class="f">화면 테마</label>')+ch('theme',[['auto',TR('자동')],['light',TR('밝게')],['dark',TR('어둡게')]])+
     TR('<label class="f">라운드 중 화면 꺼짐 방지</label>')+ch('wake',[[true,TR('켜기')],[false,TR('끄기')]])+
     TR('<label class="f">축하 효과 (파 이하 기록 시 꽃가루·불꽃)</label>')+ch('fx',[[true,TR('켜기')],[false,TR('끄기')]])+
-    TR('<label class="f">축하 효과음 (파 이하 기록 시)</label>')+'<div class="row wrap">'+[[true,TR('켜기')],[false,TR('끄기')]].map(function(v){ return '<button class="chip'+(S.set.snd===v[0]?' on':'')+'" data-act="setv" data-k="snd" data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('')+
+    TR('<label class="f">라운드 시작·종료 음악</label>')+'<div class="row wrap">'+[[true,TR('켜기')],[false,TR('끄기')]].map(function(v){ return '<button class="chip'+(S.set.bgm===v[0]?' on':'')+'" data-act="setv" data-k="bgm" data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('')+
+      '<button class="chip" data-act="bgmTest" data-v="start">'+TR('🎵 시작 음악')+'</button><button class="chip" data-act="bgmTest" data-v="end">'+TR('🎵 종료 음악')+'</button></div>'+
+    TR('<label class="f">점수 효과음 (파 이하 축하 · 보기 이상 웃긴 소리)</label>')+'<div class="row wrap">'+[[true,TR('켜기')],[false,TR('끄기')]].map(function(v){ return '<button class="chip'+(S.set.snd===v[0]?' on':'')+'" data-act="setv" data-k="snd" data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('')+
       '<button class="chip" data-act="sndTest">'+TR('🔊 효과음 듣기')+'</button></div>'+
     TR('<label class="f">축하 진동 (파 이하 기록 시)</label>')+'<div class="row wrap">'+[[true,TR('켜기')],[false,TR('끄기')]].map(function(v){ return '<button class="chip'+(S.set.vib===v[0]?' on':'')+'" data-act="setv" data-k="vib" data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('')+
       '<button class="chip" data-act="vibTest">'+TR('📳 진동 시험')+'</button></div>'+
@@ -1082,6 +1140,7 @@ function beginRound(){
     fir:new Array(18).fill(null),pen:new Array(18).fill(null),bet:{mode:'none',unit:S.set.cur==='KRW'?1000:(S.set.cur==='JPY'?100:10000),net:false},cost:{},cur:S.set.cur,undo:[],startedAt:Date.now()};
   S.names=s.names.slice(); S.hcps=s.hcps.slice(); S.lastN=s.n; S.lastCourse=c.id;
   save(); render(); window.scrollTo(0,0);
+  bgm('start');
   if(S.set.gps && GEO.loadGeo(c.id)){ gpsOn(); }
 }
 function snap(r,h){
@@ -1103,6 +1162,7 @@ function finishRound(){
   r.partial=cnt<r.order.length; r.finished=true; r.endedAt=Date.now(); r.undo=[];
   S.rounds.unshift(r); S.current=null; UI.setup=null; UI.openHist=r.id;
   save(); UI.tab='history'; render(); window.scrollTo(0,0); toast(TR('라운드가 저장되었어요'));
+  bgm('end');
   if(S.rounds.length-(S.set.backupCount||0)>=3){
     setTimeout(function(){
       openModal(TR('백업을 권장합니다'),TR('<p>백업하지 않은 라운드가 <b>')+(S.rounds.length-(S.set.backupCount||0))+TR('개</b> 있습니다. 폰 교체나 앱 삭제 시 기록이 사라지지 않도록 백업 파일을 보관하세요.</p>'),
@@ -1385,9 +1445,10 @@ function onClick(e){
   if(a==='settings'){ openModal(TR('설정'), settingsBody, [{label:TR('닫기')}]); return; }
   if(a==='langToggle'){ I18N.pick(); return; }
   if(a==='lang'){ I18N.set(el.getAttribute('data-v')); return; }
+  if(a==='bgmTest'){ var sb=S.set.bgm; S.set.bgm=true; bgm(el.getAttribute('data-v')); S.set.bgm=sb; return; }
   if(a==='sndTest'){
-    var st2=(UI.st||0)%4+1; UI.st=st2; var ss2=S.set.snd; S.set.snd=true; sfx(st2); S.set.snd=ss2;
-    toast(['',TR('파'),TR('버디'),TR('이글'),TR('홀인원')][st2]+' 🔊'+(isIOS()?'  '+TR('안 들리면: 무음 스위치 해제 · 볼륨 올리기'):''),3000); return;
+    var SEQ=[1,2,3,4,-1,-2,-3], si=(UI.st||0)%SEQ.length, st2=SEQ[si]; UI.st=si+1; var ss2=S.set.snd; S.set.snd=true; if(st2>0){ sfx(st2); } else { sfxBad(st2); } S.set.snd=ss2;
+    toast({'1':TR('파'),'2':TR('버디'),'3':TR('이글'),'4':TR('홀인원'),'-1':TR('보기'),'-2':TR('더블보기'),'-3':TR('트리플보기')}[st2]+' 🔊'+(isIOS()?'  '+TR('안 들리면: 무음 스위치 해제 · 볼륨 올리기'):''),3000); return;
   }
   if(a==='vibTest'){
     var vt=(UI.vt||0)%4+1; UI.vt=vt; var sv=S.set.vib; S.set.vib=true; vibrate(vt); S.set.vib=sv;

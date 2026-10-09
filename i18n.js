@@ -475,9 +475,12 @@ var JA={
 "아이폰 iOS ": "iPhone iOS ",
 " — 웹앱 진동은 iOS 18 이상에서만 됩니다": " — Webアプリの振動は iOS 18 以上のみ対応です",
 "안 느껴지면: 설정 → 사운드 및 햅틱 → 시스템 햅틱 켜기": "感じない場合: 設定 → サウンドと触覚 → システムの触覚をオン",
-"<label class=\"f\">축하 효과음 (파 이하 기록 시)</label>": "<label class=\"f\">お祝い効果音 (パー以下を記録したとき)</label>",
 "🔊 효과음 듣기": "🔊 効果音を聞く",
-"안 들리면: 무음 스위치 해제 · 볼륨 올리기": "聞こえない場合: マナーモード解除・音量アップ"
+"안 들리면: 무음 스위치 해제 · 볼륨 올리기": "聞こえない場合: マナーモード解除・音量アップ",
+"<label class=\"f\">점수 효과음 (파 이하 축하 · 보기 이상 웃긴 소리)</label>": "<label class=\"f\">スコア効果音 (パー以下はお祝い・ボギー以上はおもしろ音)</label>",
+"<label class=\"f\">라운드 시작·종료 음악</label>": "<label class=\"f\">ラウンド開始・終了の音楽</label>",
+"🎵 시작 음악": "🎵 開始の音楽",
+"🎵 종료 음악": "🎵 終了の音楽"
 };
 var EN={
 "블랙": "Black",
@@ -951,9 +954,12 @@ var EN={
 "아이폰 iOS ": "iPhone iOS ",
 " — 웹앱 진동은 iOS 18 이상에서만 됩니다": " — web app vibration needs iOS 18 or later",
 "안 느껴지면: 설정 → 사운드 및 햅틱 → 시스템 햅틱 켜기": "Not felt? Settings → Sounds & Haptics → System Haptics on",
-"<label class=\"f\">축하 효과음 (파 이하 기록 시)</label>": "<label class=\"f\">Celebration sound (par or better)</label>",
 "🔊 효과음 듣기": "🔊 Play sound",
-"안 들리면: 무음 스위치 해제 · 볼륨 올리기": "No sound? Turn off silent mode · raise volume"
+"안 들리면: 무음 스위치 해제 · 볼륨 올리기": "No sound? Turn off silent mode · raise volume",
+"<label class=\"f\">점수 효과음 (파 이하 축하 · 보기 이상 웃긴 소리)</label>": "<label class=\"f\">Score sounds (cheers for par or better · funny sounds for bogey or worse)</label>",
+"<label class=\"f\">라운드 시작·종료 음악</label>": "<label class=\"f\">Round start / finish music</label>",
+"🎵 시작 음악": "🎵 Start music",
+"🎵 종료 음악": "🎵 Finish music"
 };
 var I18N=(function(){
   var KEY='golfscore.lang', lang=null, asked=false, LANGS=['ko','ja','en'];

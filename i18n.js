@@ -487,7 +487,17 @@ var JA={
 "벙커": "バンカー",
 "해저드": "ハザード",
 "눈금: 그린 중앙까지 거리": "目盛: グリーン中央までの距離",
-"홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.": "ホール地図データがないため、パーと距離だけで描いた模式図です。バンカー・ハザード・ドッグレッグは表示されません。"
+"홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.": "ホール地図データがないため、パーと距離だけで描いた模式図です。バンカー・ハザード・ドッグレッグは表示されません。",
+"홀 지도를 받는 중입니다. 받고 나면 벙커·해저드가 표시됩니다.": "ホール地図を取得中です。取得後にバンカー・ハザードが表示されます。",
+"아래 [🗺 이 코스 홀 지도 받기]로 받으면 지도에 등록된 벙커·해저드가 표시됩니다.": "下の[🗺 このコースのホール地図を取得]で取得すると、地図に登録されたバンカー・ハザードが表示されます。",
+"지도를 누르면 그 지점까지 거리가 나옵니다. 두 손가락으로 확대·이동할 수 있습니다.": "地図をタップするとその地点までの距離が出ます。2本指で拡大・移動できます。",
+"이 홀 주변 벙커 ": "このホール周辺のバンカー ",
+"개 · 해저드 ": "か所・ハザード ",
+"개": "か所",
+"이 홀 주변 벙커·해저드가 지도에 등록되어 있지 않습니다.": "このホール周辺のバンカー・ハザードは地図に登録されていません。",
+" · 지도: © OpenStreetMap 기여자": " ・地図: © OpenStreetMap contributors",
+"<div class=\"infobox\" style=\"margin-top:10px\"><span class=\"spin\"></span> 홀 지도 받는 중… (기다리지 않고 라운드를 시작해도 됩니다)</div>": "<div class=\"infobox\" style=\"margin-top:10px\"><span class=\"spin\"></span> ホール地図を取得中…(待たずにラウンドを始めても大丈夫です)</div>",
+"<div class=\"note\" style=\"margin-top:10px\">공개 지도에서 이 코스의 홀 지도를 자동으로 찾지 못했습니다. 아래 버튼으로 직접 찾아 받을 수 있습니다.</div>": "<div class=\"note\" style=\"margin-top:10px\">公開地図からこのコースのホール地図を自動で見つけられませんでした。下のボタンで手動で探して取得できます。</div>"
 };
 var EN={
 "블랙": "Black",
@@ -973,7 +983,17 @@ var EN={
 "벙커": "Bunker",
 "해저드": "Hazard",
 "눈금: 그린 중앙까지 거리": "Ticks: distance to green center",
-"홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.": "No hole map data, so this is a schematic drawn from par and yardage only. Bunkers, hazards and doglegs are not shown."
+"홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.": "No hole map data, so this is a schematic drawn from par and yardage only. Bunkers, hazards and doglegs are not shown.",
+"홀 지도를 받는 중입니다. 받고 나면 벙커·해저드가 표시됩니다.": "The hole map is being downloaded. Bunkers and hazards will appear once it arrives.",
+"아래 [🗺 이 코스 홀 지도 받기]로 받으면 지도에 등록된 벙커·해저드가 표시됩니다.": "Use [🗺 Get hole map for this course] below to show the bunkers and hazards on the map.",
+"지도를 누르면 그 지점까지 거리가 나옵니다. 두 손가락으로 확대·이동할 수 있습니다.": "Tap the map to see the distance to that point. Pinch with two fingers to zoom and pan.",
+"이 홀 주변 벙커 ": "Near this hole: bunkers ",
+"개 · 해저드 ": " · hazards ",
+"개": "",
+"이 홀 주변 벙커·해저드가 지도에 등록되어 있지 않습니다.": "No bunkers or hazards are mapped near this hole.",
+" · 지도: © OpenStreetMap 기여자": " · Map: © OpenStreetMap contributors",
+"<div class=\"infobox\" style=\"margin-top:10px\"><span class=\"spin\"></span> 홀 지도 받는 중… (기다리지 않고 라운드를 시작해도 됩니다)</div>": "<div class=\"infobox\" style=\"margin-top:10px\"><span class=\"spin\"></span> Getting hole map… (you can start the round without waiting)</div>",
+"<div class=\"note\" style=\"margin-top:10px\">공개 지도에서 이 코스의 홀 지도를 자동으로 찾지 못했습니다. 아래 버튼으로 직접 찾아 받을 수 있습니다.</div>": "<div class=\"note\" style=\"margin-top:10px\">The hole map for this course could not be found automatically on the open map. You can search and download it with the button below.</div>"
 };
 var I18N=(function(){
   var KEY='golfscore.lang', lang=null, asked=false, LANGS=['ko','ja','en'];

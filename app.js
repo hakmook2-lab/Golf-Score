@@ -3,7 +3,7 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.11.0';
+var VERSION='3.12.0';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
@@ -563,7 +563,7 @@ function liveUpdate(){
   var now=Date.now(); if(now-liveT<1500){ return; } liveT=now;
   if(UI.tab!=='round'||!S.current||UI.modal){ return; }
   var d=$('#distPanel'); if(d){ d.innerHTML=distHtml(S.current); }
-  var m=$('#holeMapBox'); if(m){ m.innerHTML=holeMapInner(S.current); }
+  var m=$('#holeMapBox'); if(m){ m.innerHTML=holeMapInner(S.current); applyZoom(); }
 }
 
 /* ================= 지도 보조 ================= */
@@ -589,11 +589,16 @@ function distHtml(r){
 }
 function holeMapInner(r){ return holeSignHtml(r,false); }
 /* 홀 정보 팻말: 상단(홀·파·HCP·티별 거리) + 그림 + 범례 */
+function signPx(big){
+  var main=$('#main'), w=(main?main.clientWidth:window.innerWidth)-32, hh=Math.round(window.innerHeight*(big?0.74:0.68));
+  if(big){ w=Math.min(window.innerWidth,680)-36; }
+  return {w:Math.max(220,w), h:Math.max(300,Math.min(hh,900))};
+}
 function holeSignHtml(r,big){
   var h=r.order[r.idx], g=geoOf(r), ref=refOf(r,h), gh=g&&g.holes?g.holes[ref]:null;
   var yd={}; ['black','blue','white','red'].forEach(function(k){ if(r.yd&&r.yd[k]&&r.yd[k][h]){ yd[k]=r.yd[k][h]; } });
   var mapY=r.yd&&r.yd.map?r.yd.map[h]:null, tee=r.tee||'white';
-  var res=GEO.signSVG({geo:g, hole:gh, par:r.par[h], yd:yd, mapYd:mapY, tee:tee, unit:S.set.unit, pos:UI.pos, pin:pinOf(r.courseId,ref), big:!!big, noTap:!!big});
+  var res=GEO.signSVG({geo:g, hole:gh, par:r.par[h], yd:yd, mapYd:mapY, tee:tee, unit:S.set.unit, pos:UI.pos, pin:pinOf(r.courseId,ref), px:signPx(big), fontPx:S.set.contrast==='high'?19:16, noTap:!!big});
   if(!big){ UI.holeMeta=res.meta; }
   var chips=['black','blue','white','red'].filter(function(k){ return yd[k]; }).map(function(k){ return '<span class="tc '+k+(k===tee?' on':'')+'"><i></i>'+yd[k]+'<small>y</small></span>'; }).join('');
   if(!chips&&mapY){ chips='<span class="tc map"><i></i>'+mapY+'<small>y</small></span>'; }
@@ -601,11 +606,89 @@ function holeSignHtml(r,big){
   var leg='<span><i style="background:#8ccb67"></i>'+TR('페어웨이')+'</span><span><i style="background:#d2f0bb"></i>'+TR('그린')+'</span>'+
     (gh?'<span><i style="background:#f3e5b0"></i>'+TR('벙커')+'</span><span><i style="background:#5fa9e6"></i>'+TR('해저드')+'</span>':'')+
     '<span><i style="background:#fff;border:1px solid #999"></i>'+TR('눈금: 그린 중앙까지 거리')+' ('+u+')</span>';
+  var note, cc=courseOf(r.courseId);
+  if(!gh){ note=TR('홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.')+(g?'':' '+(cc&&cc.pending?TR('홀 지도를 받는 중입니다. 받고 나면 벙커·해저드가 표시됩니다.'):TR('아래 [🗺 이 코스 홀 지도 받기]로 받으면 지도에 등록된 벙커·해저드가 표시됩니다.'))); }
+  else { note=TR('지도를 누르면 그 지점까지 거리가 나옵니다. 두 손가락으로 확대·이동할 수 있습니다.')+' '+
+    (res.nB||res.nW?TR('이 홀 주변 벙커 ')+res.nB+TR('개 · 해저드 ')+res.nW+TR('개'):TR('이 홀 주변 벙커·해저드가 지도에 등록되어 있지 않습니다.'))+TR(' · 지도: © OpenStreetMap 기여자'); }
   return '<div class="sign'+(big?' big':'')+'"><div class="sh"><div class="hn">'+esc(r.labels[h])+'</div><div class="hp">PAR <b>'+r.par[h]+'</b>'+(r.si&&r.si[h]?' · HCP <b>'+r.si[h]+'</b>':'')+'</div><div class="tcs">'+chips+'</div></div>'+
-    '<div class="holemap">'+res.svg+(gh&&!big?'<div class="tapinfo" id="tapInfo"></div>':'')+'</div>'+
-    '<div class="sl">'+leg+'</div>'+
-    (gh?(big?'':TR('<div class="note" style="margin-top:4px">지도를 누르면 그 지점까지 거리가 나옵니다. 지도: © OpenStreetMap 기여자</div>')):'<div class="note" style="margin-top:4px">'+TR('홀 지도 데이터가 없어 파와 거리만으로 그린 모식도입니다. 벙커·해저드·도그렉은 표시되지 않습니다.')+'</div>')+
-    (big?'':'<button class="btn ghost block sm" style="margin-top:8px" data-act="signBig">'+TR('🔍 크게 보기')+'</button>')+'</div>';
+    '<div class="holemap" id="holeZoom">'+res.svg+'<div class="zb"><button type="button" data-act="zoomIn" aria-label="zoom in">＋</button><button type="button" data-act="zoomOut" aria-label="zoom out">－</button><button type="button" data-act="zoomReset" aria-label="reset">⟲</button></div>'+(gh&&!big?'<div class="tapinfo" id="tapInfo"></div>':'')+'</div>'+
+    '<div class="sl">'+leg+'</div><div class="note" style="margin-top:4px">'+note+'</div></div>';
+}
+/* ---- 홀 정보 그림 확대/이동 (두 손가락 핀치, 드래그, 더블탭, 마우스 휠, ＋/－ 버튼) ---- */
+var ZP={pts:{}, box:null, start:null, moved:false, sup:0, lastTap:0, lastPt:null};
+function zoomState(){ var k=S.current?(S.current.courseId+':'+S.current.idx):'-'; if(!UI.zoom||UI.zoom.k!==k){ UI.zoom={k:k,s:1,x:0,y:0}; } return UI.zoom; }
+function zoomBoxSize(box){ var svg=box.querySelector('svg'); if(!svg){ return null; } svg.style.transform=''; var rc=svg.getBoundingClientRect(); return {svg:svg, w:rc.width, h:rc.height, bw:box.clientWidth, bh:box.clientHeight}; }
+function applyZoom(box){
+  box=box||document.getElementById('holeZoom'); if(!box){ return; }
+  var z=zoomState(), d=zoomBoxSize(box); if(!d){ return; }
+  if(z.s<=1.001){ z.s=1; z.x=0; z.y=0; }
+  else {
+    var cw=d.w*z.s, ch=d.h*z.s;
+    z.x=cw>d.bw?Math.min(0,Math.max(d.bw-cw,z.x)):(d.bw-cw)/2;
+    z.y=ch>d.bh?Math.min(0,Math.max(d.bh-ch,z.y)):(d.bh-ch)/2;
+  }
+  d.svg.style.transformOrigin='0 0';
+  d.svg.style.transform=z.s===1?'':'translate('+z.x.toFixed(1)+'px,'+z.y.toFixed(1)+'px) scale('+z.s.toFixed(3)+')';
+  box.style.touchAction=z.s>1?'none':'pan-y';
+  box.classList.toggle('zoomed',z.s>1);
+}
+function zoomTo(box, ns, cx, cy){ /* 화면 점(cx,cy: box 기준 px)을 고정한 채 배율 ns로 */
+  var z=zoomState(); ns=Math.max(1,Math.min(5,ns));
+  var px=(cx-z.x)/z.s, py=(cy-z.y)/z.s; z.s=ns; z.x=cx-px*ns; z.y=cy-py*ns; applyZoom(box);
+}
+function zoomBtn(a){
+  var box=document.getElementById('holeZoom'); if(!box){ return; }
+  var z=zoomState(), cx=box.clientWidth/2, cy=box.clientHeight/2;
+  if(a==='zoomReset'){ z.s=1; applyZoom(box); return; }
+  zoomTo(box, a==='zoomIn'?z.s*1.5:z.s/1.5, cx, cy);
+}
+function zoomBind(){
+  function boxOf(e){ var b=e.target.closest&&e.target.closest('#holeZoom'); return (b&&!e.target.closest('.zb'))?b:null; }
+  function rel(box,e){ var rc=box.getBoundingClientRect(); return [e.clientX-rc.left, e.clientY-rc.top]; }
+  document.addEventListener('pointerdown', function(e){
+    var box=boxOf(e); if(!box){ return; }
+    if(ZP.box&&ZP.box!==box){ ZP.pts={}; }
+    ZP.box=box; ZP.pts[e.pointerId]=rel(box,e);
+    var ids=Object.keys(ZP.pts), z=zoomState();
+    ZP.start={s:z.s, x:z.x, y:z.y, pts:{}}; ids.forEach(function(i){ ZP.start.pts[i]=ZP.pts[i].slice(); });
+    if(ids.length===1){ ZP.moved=false; }
+    if(ids.length>=2||z.s>1){ try{ box.setPointerCapture(e.pointerId); }catch(x){} if(e.cancelable){ e.preventDefault(); } }
+  }, {passive:false});
+  document.addEventListener('pointermove', function(e){
+    if(!ZP.box||!ZP.pts[e.pointerId]||!ZP.start){ return; }
+    var box=ZP.box; ZP.pts[e.pointerId]=rel(box,e);
+    var ids=Object.keys(ZP.pts), st=ZP.start, z=zoomState();
+    if(ids.length>=2 && st.pts[ids[0]] && st.pts[ids[1]]){
+      var a0=st.pts[ids[0]], b0=st.pts[ids[1]], a1=ZP.pts[ids[0]], b1=ZP.pts[ids[1]];
+      var d0=Math.hypot(b0[0]-a0[0],b0[1]-a0[1])||1, d1=Math.hypot(b1[0]-a1[0],b1[1]-a1[1]);
+      var ns=Math.max(1,Math.min(5,st.s*d1/d0)), m0=[(a0[0]+b0[0])/2,(a0[1]+b0[1])/2], m1=[(a1[0]+b1[0])/2,(a1[1]+b1[1])/2];
+      var px=(m0[0]-st.x)/st.s, py=(m0[1]-st.y)/st.s; z.s=ns; z.x=m1[0]-px*ns; z.y=m1[1]-py*ns; ZP.moved=true; applyZoom(box);
+      if(e.cancelable){ e.preventDefault(); }
+    } else if(ids.length===1 && st.s>1){
+      var p0=st.pts[ids[0]], p1=ZP.pts[ids[0]]; if(!p0){ return; }
+      var dx=p1[0]-p0[0], dy=p1[1]-p0[1]; if(Math.abs(dx)+Math.abs(dy)>6){ ZP.moved=true; }
+      z.x=st.x+dx; z.y=st.y+dy; applyZoom(box);
+      if(e.cancelable){ e.preventDefault(); }
+    }
+  }, {passive:false});
+  function up(e){
+    if(!ZP.box||!ZP.pts[e.pointerId]){ return; }
+    var box=ZP.box, p=ZP.pts[e.pointerId]; delete ZP.pts[e.pointerId];
+    var ids=Object.keys(ZP.pts), z=zoomState();
+    if(ZP.moved){ ZP.sup=Date.now(); }
+    else if(e.type==='pointerup' && e.pointerType!=='mouse'){ /* 더블탭: 2.5배 ↔ 원래대로 */
+      var now=Date.now();
+      if(now-ZP.lastTap<320 && ZP.lastPt && Math.hypot(p[0]-ZP.lastPt[0],p[1]-ZP.lastPt[1])<40){ zoomTo(box, z.s>1?1:2.5, p[0], p[1]); ZP.sup=now; ZP.lastTap=0; }
+      else { ZP.lastTap=now; ZP.lastPt=p; }
+    }
+    if(ids.length){ ZP.start={s:z.s, x:z.x, y:z.y, pts:{}}; ids.forEach(function(i){ ZP.start.pts[i]=ZP.pts[i].slice(); }); ZP.moved=true; }
+    else { ZP.start=null; }
+  }
+  document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+  document.addEventListener('wheel', function(e){
+    var box=boxOf(e); if(!box){ return; }
+    var r=rel(box,e), z=zoomState(); zoomTo(box, z.s*Math.pow(1.0015, -e.deltaY), r[0], r[1]); e.preventDefault();
+  }, {passive:false});
 }
 function yardText(r,h){
   if(!r.yd){ return ''; }
@@ -764,7 +847,7 @@ function holeGrid(r){
 function vHole(r){
   var h=r.order[r.idx], par=r.par[h], si=r.si?r.si[h]:null, N=r.order.length;
   var dots=holeGrid(r);
-  var g=geoOf(r), gh=geoHole(r,h);
+  var g=geoOf(r), gh=geoHole(r,h), cc=courseOf(r.courseId);
   var tools='<div class="toolrow">'+
     '<button class="iconbtn'+(S.set.mapOn?' on':'')+TR('" data-act="mapToggle">⛳ 홀 정보</button>')+
     TR('<button class="iconbtn" data-act="satHole">🛰 위성지도</button>')+
@@ -777,7 +860,9 @@ function vHole(r){
     dots+tools+
     '<div id="distPanel">'+distHtml(r)+'</div>'+
     (S.set.mapOn?'<div id="holeMapBox">'+holeMapInner(r)+'</div>':'')+
-    (!g?TR('<button class="btn ghost block sm" style="margin-top:10px" data-act="geoGetRound">🗺 이 코스 홀 지도 받기 (현재 지도 없음)</button>'):'')+
+    (!g?(cc&&cc.pending?TR('<div class="infobox" style="margin-top:10px"><span class="spin"></span> 홀 지도 받는 중… (기다리지 않고 라운드를 시작해도 됩니다)</div>'):
+      ((cc&&cc.geoFail?TR('<div class="note" style="margin-top:10px">공개 지도에서 이 코스의 홀 지도를 자동으로 찾지 못했습니다. 아래 버튼으로 직접 찾아 받을 수 있습니다.</div>'):'')+
+      TR('<button class="btn ghost block sm" style="margin-top:10px" data-act="geoGetRound">🗺 이 코스 홀 지도 받기 (현재 지도 없음)</button>'))):'')+
     '</div>';
   for(var p=0;p<r.players.length;p++){
     var s=r.scores[p][h], pt=r.putts[p][h], st=stats(r,p);
@@ -1126,6 +1211,7 @@ function render(){
   $('#subTitle').textContent=S.current?(TR('진행 중: ')+S.current.courseName):TR('홀 종료 시마다 기록 · 자동 저장');
   renderDock();
   syncWake();
+  applyZoom();
 }
 function openModal(title,body,btns){ modalCbs=btns.map(function(b){ return b.fn; }); UI.modal={title:title,body:body,btns:btns}; render(); }
 function closeModal(){ UI.modal=null; modalCbs=[]; render(); }
@@ -1153,6 +1239,7 @@ function beginRound(){
   save(); render(); window.scrollTo(0,0);
   bgm('start');
   if(S.set.gps && GEO.loadGeo(c.id)){ gpsOn(); }
+  autoGeo(c.id);
 }
 function snap(r,h){
   r.undo.push({h:h,idx:r.idx,s:r.scores.map(function(a){ return a[h]; }),pt:r.putts.map(function(a){ return a[h]; }),f:r.fir[h],pn:r.pen[h]});
@@ -1343,6 +1430,7 @@ function applyGeo(id, g, x){
     c.src=oc.src;
   }
   c.pending=false; c.geoFail=false; save();
+  if(S.current&&S.current.courseId===id&&S.set.gps&&watchId==null&&g.refs.length){ gpsOn(); }
   if(UI.tab==='courses'||UI.tab==='round'){ if(!UI.modal){ render(); } }
   toast(g.refs.length?('🗺 「'+c.name+TR('」 홀 지도 ')+g.refs.length+TR('홀 받음')):('「'+c.name+TR('」 공개 지도에 홀 정보는 없습니다(코스 윤곽만)')),3000);
 }
@@ -1354,6 +1442,21 @@ function bgDownload(id, x){
   }).catch(function(){
     bgDl[id]=false; var c=courseOf(id); if(c){ c.pending=false; c.geoFail=true; save(); if(UI.tab==='courses'&&!UI.modal){ render(); } }
   });
+}
+/* 라운드 시작 시 홀 지도 자동 받기(기본): 지도가 없는 코스는 위치 주변 OSM 골프장을 찾아 뒤에서 내려받음 (6시간에 한 번만 재시도) */
+function autoGeo(id){
+  var c=courseOf(id); if(!c||GEO.loadGeo(id)||bgDl[id]||navigator.onLine===false){ return; }
+  var now=Date.now(); if(c.geoTry&&now-c.geoTry<6*3600e3){ return; }
+  c.geoTry=now; c.geoFail=false; save();
+  var m=/^osm([wr])(\d+)$/.exec(id), ll=c.ll;
+  if(m){ c.pending=true; save(); bgDownload(id,{type:m[1]==='w'?'way':'relation',id:+m[2],lat:ll?ll[0]:null,lon:ll?ll[1]:null,bounds:c.bounds||null}); return; }
+  if(!ll){ return; }
+  c.pending=true; save(); bgDl[id]=true;
+  GEO.nearby(ll[0],ll[1],2500,null).then(function(list){
+    bgDl[id]=false;
+    if(list.length===1||(list.length&&list[0].dist<400&&(!list[1]||list[1].dist>1200))){ bgDownload(id,list[0]); }
+    else { c.pending=false; c.geoFail=true; save(); if(UI.tab==='round'&&!UI.modal){ render(); } }
+  }).catch(function(){ bgDl[id]=false; c.pending=false; c.geoFail=true; save(); if(UI.tab==='round'&&!UI.modal){ render(); } });
 }
 function pickResult(x){
   var attach=UI.search&&UI.search.attach;
@@ -1441,7 +1544,7 @@ function closeSat(){ $('#mapFull').style.display='none'; satState=null; if(UI.ta
 function onClick(e){
   /* 홀 지도(SVG) 탭 → 거리 */
   var svg=e.target.closest&&e.target.closest('svg[data-holemap]');
-  if(svg && UI.holeMeta && S.current){ holeTap(svg,e); return; }
+  if(svg && UI.holeMeta && S.current){ if(Date.now()-ZP.sup<450){ return; } holeTap(svg,e); return; }
   var el=e.target.closest('[data-act]');
   if(!el){ return; }
   var a=el.getAttribute('data-act'), r=S.current;
@@ -1552,7 +1655,7 @@ function onClick(e){
   }
   /* 지도 / GPS */
   if(a==='gpsToggle'){ if(watchId!=null){ gpsOff(); toast(TR('GPS를 껐어요')); } else { gpsOn(); toast(TR('GPS 켜는 중… (처음엔 위치 권한을 허용해 주세요)'),2600); } render(); return; }
-  if(a==='signBig'&&r){ openModal(holeName(r.labels[r.order[r.idx]])+' · PAR '+r.par[r.order[r.idx]], function(){ return holeSignHtml(S.current,true); }, [{label:TR('닫기')}]); return; }
+  if(a==='zoomIn'||a==='zoomOut'||a==='zoomReset'){ zoomBtn(a); return; }
   if(a==='mapToggle'){ S.set.mapOn=!S.set.mapOn; save(); render(); return; }
   if(a==='satHole'&&r){
     var h2=r.order[r.idx], ref=refOf(r,h2), g=geoOf(r), c=courseOf(r.courseId);
@@ -1575,7 +1678,7 @@ function onClick(e){
     S.greens[r.courseId]=S.greens[r.courseId]||{}; S.greens[r.courseId][pref]=[+UI.pos[0].toFixed(6),+UI.pos[1].toFixed(6)];
     save(); render(); toast((UI.acc>25?TR('저장했어요 (GPS 오차가 커서 위성지도에서 다시 확인 권장)'):TR('이 홀 그린 위치를 저장했어요')),3000); return;
   }
-  if(a==='geoGetRound'&&r){ geoGetFor(r.courseId); return; }
+  if(a==='geoGetRound'&&r){ var gc0=courseOf(r.courseId); if(gc0){ gc0.geoTry=0; } geoGetFor(r.courseId); return; }
   /* 공유 */
   if(a==='share'){
     var rr=findRound(el.getAttribute('data-rid'));
@@ -1672,8 +1775,9 @@ function holeTap(svg,e){
   var gm=svg.querySelector('#tapMark');
   if(gm){
     var F=m.S(m.T(from));
-    gm.innerHTML='<line x1="'+F[0]+'" y1="'+F[1]+'" x2="'+hit.sx.toFixed(1)+'" y2="'+hit.sy.toFixed(1)+'" stroke="#ffeb3b" stroke-width="1.4"/>'+
-      '<circle cx="'+hit.sx.toFixed(1)+'" cy="'+hit.sy.toFixed(1)+'" r="4" fill="#ffeb3b" stroke="#000" stroke-width="1"/>';
+    var uu=m.u||1;
+    gm.innerHTML='<line x1="'+F[0]+'" y1="'+F[1]+'" x2="'+hit.sx.toFixed(1)+'" y2="'+hit.sy.toFixed(1)+'" stroke="#ffeb3b" stroke-width="'+(1.8*uu).toFixed(2)+'"/>'+
+      '<circle cx="'+hit.sx.toFixed(1)+'" cy="'+hit.sy.toFixed(1)+'" r="'+(5*uu).toFixed(2)+'" fill="#ffeb3b" stroke="#000" stroke-width="'+(1.2*uu).toFixed(2)+'"/>';
   }
 }
 function onInput(e){
@@ -1767,6 +1871,7 @@ setTimeout(checkBadge,800); setTimeout(checkBadge,3000);
 load();
 applyTheme();
 document.addEventListener('click',onClick);
+zoomBind();
 document.addEventListener('input',onInput);
 document.addEventListener('change',onChange);
 document.addEventListener('keydown',onKey);
@@ -1783,5 +1888,6 @@ registerSW();
 if(isStandalone()){ askPersist(); }
 setTimeout(function(){ if(navigator.onLine!==false){ GEO.prefetch(S.set.lastPos||null); } }, 4000);
 if(S.current&&S.set.gps&&GEO.loadGeo(S.current.courseId)){ gpsOn(); }
+if(S.current){ setTimeout(function(){ autoGeo(S.current.courseId); },1500); }
 window.GS={pickResult:pickResult,S:S,UI:UI,render:render,stats:stats,betCalc:betCalc,strokes:strokes,buildLayout:buildLayout,courseOf:courseOf};
 })();

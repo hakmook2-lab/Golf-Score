@@ -228,8 +228,11 @@ table.kv td:last-child{text-align:right;font-weight:700}
 .statgrid b{display:block;font-size:22px}
 .statgrid span{font-size:11px;color:var(--mute)}
 /* 홀 지도 */
-.holemap{position:relative;background:var(--rough);border-radius:14px;overflow:hidden;margin-top:10px;touch-action:manipulation}
-.holemap svg{display:block;width:100%;height:auto}
+.holemap{position:relative;background:var(--rough);border-radius:14px;overflow:hidden;margin-top:10px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.holemap svg{display:block;width:100%;height:auto;will-change:transform}
+.holemap .zb{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
+.holemap .zb button{width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.55);color:#fff;font-size:22px;font-weight:800;line-height:1;padding:0;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.holemap.zoomed .zb button{background:rgba(0,0,0,.7)}
 .holemap .lg{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;border-radius:8px;padding:4px 8px}
 .sign .sh{display:flex;align-items:center;gap:12px;margin-top:10px}
 .sign .hn{font-size:36px;font-weight:900;line-height:1;min-width:44px;text-align:center}

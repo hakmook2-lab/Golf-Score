@@ -471,7 +471,13 @@ var JA={
 "이 홀로 이동": "このホールへ移動",
 "<label class=\"f\">축하 효과 (파 이하 기록 시 꽃가루·불꽃)</label>": "<label class=\"f\">お祝いエフェクト (パー以下で紙吹雪・花火)</label>",
 "<label class=\"f\">축하 진동 (파 이하 기록 시)</label>": "<label class=\"f\">お祝いバイブ (パー以下を記録したとき)</label>",
-"📳 진동 시험": "📳 振動テスト"
+"📳 진동 시험": "📳 振動テスト",
+"아이폰 iOS ": "iPhone iOS ",
+" — 웹앱 진동은 iOS 18 이상에서만 됩니다": " — Webアプリの振動は iOS 18 以上のみ対応です",
+"안 느껴지면: 설정 → 사운드 및 햅틱 → 시스템 햅틱 켜기": "感じない場合: 設定 → サウンドと触覚 → システムの触覚をオン",
+"<label class=\"f\">축하 효과음 (파 이하 기록 시)</label>": "<label class=\"f\">お祝い効果音 (パー以下を記録したとき)</label>",
+"🔊 효과음 듣기": "🔊 効果音を聞く",
+"안 들리면: 무음 스위치 해제 · 볼륨 올리기": "聞こえない場合: マナーモード解除・音量アップ"
 };
 var EN={
 "블랙": "Black",
@@ -941,7 +947,13 @@ var EN={
 "이 홀로 이동": "Go to this hole",
 "<label class=\"f\">축하 효과 (파 이하 기록 시 꽃가루·불꽃)</label>": "<label class=\"f\">Celebration effects (confetti and fireworks for par or better)</label>",
 "<label class=\"f\">축하 진동 (파 이하 기록 시)</label>": "<label class=\"f\">Celebration vibration (par or better)</label>",
-"📳 진동 시험": "📳 Test vibration"
+"📳 진동 시험": "📳 Test vibration",
+"아이폰 iOS ": "iPhone iOS ",
+" — 웹앱 진동은 iOS 18 이상에서만 됩니다": " — web app vibration needs iOS 18 or later",
+"안 느껴지면: 설정 → 사운드 및 햅틱 → 시스템 햅틱 켜기": "Not felt? Settings → Sounds & Haptics → System Haptics on",
+"<label class=\"f\">축하 효과음 (파 이하 기록 시)</label>": "<label class=\"f\">Celebration sound (par or better)</label>",
+"🔊 효과음 듣기": "🔊 Play sound",
+"안 들리면: 무음 스위치 해제 · 볼륨 올리기": "No sound? Turn off silent mode · raise volume"
 };
 var I18N=(function(){
   var KEY='golfscore.lang', lang=null, asked=false, LANGS=['ko','ja','en'];

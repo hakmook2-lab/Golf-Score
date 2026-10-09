@@ -3,12 +3,12 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.7.0';
+var VERSION='3.8.0';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
 var S={ver:2,current:null,rounds:[],pars:{},custom:[],names:[],hcps:[],lastCourse:null,lastN:1,greens:{},
-  set:{unit:'yd',contrast:'normal',theme:'auto',wake:true,voice:true,fx:true,vib:true,cur:'IDR',hideInstall:false,lastBackup:0,backupCount:0,gps:false,mapOn:true,me:'',badgeGap:'auto'}};
+  set:{unit:'yd',contrast:'normal',theme:'auto',wake:true,voice:true,fx:true,vib:true,snd:true,cur:'IDR',hideInstall:false,lastBackup:0,backupCount:0,gps:false,mapOn:true,me:'',badgeGap:'auto'}};
 var UI={tab:'round',setup:null,openHist:null,openCourse:null,modal:null,pos:null,acc:null,search:null,dl:null,statP:'all',tap:null,gp:0};
 var modalCbs=[];
 
@@ -78,18 +78,16 @@ function queueFx(r,p,h,delay){
 }
 /* ================= 진동 ================= */
 /* 안드로이드: Vibration API / 아이폰(iOS 18 이상 Safari·홈 화면 앱): 스위치 토글의 햅틱을 이용 */
-var HAP=null;
+/* 아이폰: iOS 18부터 '스위치' 체크박스를 누르면 시스템 햅틱이 울림 → 화면에 안 보이는 스위치를 만들어 눌러 줌
+   (사용자가 화면을 누른 그 순간에만 동작. iOS 17 이하, '시스템 햅틱' 꺼짐이면 울리지 않음) */
+function iosMajor(){ var m=/OS (\d+)_\d+(?:_\d+)? like Mac OS X/.exec(navigator.userAgent||''); return m?parseInt(m[1],10):0; }
 function hapTick(){
   try{
-    if(!HAP){
-      var i=document.createElement('input'); i.type='checkbox'; i.setAttribute('switch',''); i.id='hapSw';
-      i.setAttribute('aria-hidden','true'); i.tabIndex=-1;
-      i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none;width:1px;height:1px';
-      var l=document.createElement('label'); l.htmlFor='hapSw'; l.id='hapLb';
-      l.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none;width:1px;height:1px';
-      document.body.appendChild(i); document.body.appendChild(l); HAP=l;
-    }
-    HAP.click();
+    var lb=document.createElement('label'); lb.setAttribute('aria-hidden','true'); lb.style.display='none';
+    var i=document.createElement('input'); i.type='checkbox'; i.setAttribute('switch','');
+    lb.appendChild(i); (document.head||document.body).appendChild(lb);
+    lb.click();
+    lb.parentNode.removeChild(lb);
   }catch(e){}
 }
 var VIB_PAT=[[90],[110,70,110],[160,80,160,80,320],[220,100,220,100,220,100,700]];
@@ -98,11 +96,69 @@ function vibrate(tier){
   var pat=VIB_PAT[Math.min(4,tier)-1];
   if(navigator.vibrate){ try{ if(navigator.vibrate(pat)){ return; } }catch(e){} }
   var n=Math.ceil(pat.length/2); hapTick();
-  for(var k=1;k<n;k++){ setTimeout(hapTick,k*170); }
+  for(var k=1;k<n;k++){ setTimeout(hapTick,k*130); }
+}
+/* ================= 효과음 (파 이하) — Web Audio로 직접 합성, 음원 파일 없음 ================= */
+var AC=null;
+function audioCtx(){
+  try{
+    if(!AC){
+      var C=window.AudioContext||window.webkitAudioContext; if(!C){ return null; }
+      AC=new C();
+      var comp=AC.createDynamicsCompressor(), mg=AC.createGain(); mg.gain.value=0.7;
+      comp.connect(mg); mg.connect(AC.destination); AC.__out=comp;
+    }
+    if(AC.state==='suspended'&&AC.resume){ AC.resume(); }
+    return AC;
+  }catch(e){ return null; }
+}
+/* 아이폰은 첫 터치 때 소리 엔진을 깨워 둬야 함 */
+(function(){
+  function un(){ var c=audioCtx(); if(c){ try{ var b=c.createBuffer(1,1,22050), s=c.createBufferSource(); s.buffer=b; s.connect(c.destination); s.start(0); }catch(e){} }
+    document.removeEventListener('touchend',un,true); document.removeEventListener('click',un,true); }
+  document.addEventListener('touchend',un,true); document.addEventListener('click',un,true);
+})();
+function sTone(c,t,f,d,type,vol,f2){
+  var o=c.createOscillator(), g=c.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(f,t); if(f2){ o.frequency.exponentialRampToValueAtTime(f2,t+d); }
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  o.connect(g); g.connect(c.__out); o.start(t); o.stop(t+d+0.05);
+}
+function sNoise(c,t,d,vol,freq,q,attack){
+  var n=Math.max(1,Math.floor(c.sampleRate*d)), b=c.createBuffer(1,n,c.sampleRate), x=b.getChannelData(0);
+  for(var i=0;i<n;i++){ x[i]=Math.random()*2-1; }
+  var s=c.createBufferSource(); s.buffer=b;
+  var f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.value=freq||1200; f.Q.value=q||0.8;
+  var g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+(attack||0.005)); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  s.connect(f); f.connect(g); g.connect(c.__out); s.start(t); s.stop(t+d+0.02);
+}
+function sPop(c,t,v){ sNoise(c,t,0.35,v||0.5,500+Math.random()*700,0.7); sNoise(c,t+0.05,0.5,(v||0.5)*0.35,3500+Math.random()*2000,1.5); } /* 불꽃 '펑' + 지지직 */
+function sfx(tier){
+  if(S.set.snd===false||!tier){ return; }
+  var c=audioCtx(); if(!c){ return; }
+  var t=c.currentTime+0.02, i;
+  if(tier===1){ /* 파: 맑은 딩동 */
+    sTone(c,t,1046.5,0.22,'triangle',0.35); sTone(c,t+0.12,1318.5,0.5,'triangle',0.35);
+  } else if(tier===2){ /* 버디: 올라가는 아르페지오 + 새소리 */
+    [523.25,659.25,783.99,1046.5].forEach(function(f,k){ sTone(c,t+k*0.08,f,k===3?0.6:0.2,'triangle',0.32); });
+    sTone(c,t+0.45,2200,0.09,'sine',0.18,3400); sTone(c,t+0.58,2400,0.09,'sine',0.18,3600);
+  } else if(tier===3){ /* 이글: 팡파르 + 불꽃 */
+    var fan=[[392,0,0.14],[523.25,0.15,0.14],[659.25,0.3,0.14],[783.99,0.45,0.6]];
+    fan.forEach(function(n){ sTone(c,t+n[1],n[0],n[2]+0.05,'sawtooth',0.12); sTone(c,t+n[1],n[0]*2,n[2],'triangle',0.12); });
+    for(i=0;i<5;i++){ sPop(c,t+1.0+i*0.25,0.45); }
+    sTone(c,t+1.1,1568,0.8,'sine',0.08,2093);
+  } else { /* 알바트로스·홀인원: 큰 팡파르 + 환호 + 불꽃 연발 */
+    var big=[[392,0,0.12],[392,0.13,0.12],[392,0.26,0.12],[523.25,0.4,0.5],[659.25,0.95,0.2],[783.99,1.15,0.9]];
+    big.forEach(function(n){ sTone(c,t+n[1],n[0],n[2]+0.05,'sawtooth',0.13); sTone(c,t+n[1],n[0]*1.5,n[2],'square',0.05); sTone(c,t+n[1],n[0]*2,n[2],'triangle',0.1); });
+    [523.25,659.25,783.99,1046.5].forEach(function(f){ sTone(c,t+1.15,f,1.4,'triangle',0.08); });
+    sNoise(c,t+0.6,3.2,0.22,1400,0.4,0.6);   /* 관중 환호 */
+    for(i=0;i<12;i++){ sPop(c,t+0.9+i*0.17,0.4); }
+  }
 }
 function celebrate(tier,word,who){
   var reduce=false; try{ reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
   vibrate(tier);
+  sfx(tier);
   fxBanner(tier,word,who);
   if(reduce){ return; }
   var cv=FX.cv;
@@ -965,6 +1021,8 @@ function settingsBody(){
     TR('<label class="f">화면 테마</label>')+ch('theme',[['auto',TR('자동')],['light',TR('밝게')],['dark',TR('어둡게')]])+
     TR('<label class="f">라운드 중 화면 꺼짐 방지</label>')+ch('wake',[[true,TR('켜기')],[false,TR('끄기')]])+
     TR('<label class="f">축하 효과 (파 이하 기록 시 꽃가루·불꽃)</label>')+ch('fx',[[true,TR('켜기')],[false,TR('끄기')]])+
+    TR('<label class="f">축하 효과음 (파 이하 기록 시)</label>')+'<div class="row wrap">'+[[true,TR('켜기')],[false,TR('끄기')]].map(function(v){ return '<button class="chip'+(S.set.snd===v[0]?' on':'')+'" data-act="setv" data-k="snd" data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('')+
+      '<button class="chip" data-act="sndTest">'+TR('🔊 효과음 듣기')+'</button></div>'+
     TR('<label class="f">축하 진동 (파 이하 기록 시)</label>')+'<div class="row wrap">'+[[true,TR('켜기')],[false,TR('끄기')]].map(function(v){ return '<button class="chip'+(S.set.vib===v[0]?' on':'')+'" data-act="setv" data-k="vib" data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('')+
       '<button class="chip" data-act="vibTest">'+TR('📳 진동 시험')+'</button></div>'+
 
@@ -1327,7 +1385,19 @@ function onClick(e){
   if(a==='settings'){ openModal(TR('설정'), settingsBody, [{label:TR('닫기')}]); return; }
   if(a==='langToggle'){ I18N.pick(); return; }
   if(a==='lang'){ I18N.set(el.getAttribute('data-v')); return; }
-  if(a==='vibTest'){ var vt=(UI.vt||0)%4+1; UI.vt=vt; var sv=S.set.vib; S.set.vib=true; vibrate(vt); S.set.vib=sv; toast(['',TR('파'),TR('버디'),TR('이글'),TR('홀인원')][vt]+' 📳'); return; }
+  if(a==='sndTest'){
+    var st2=(UI.st||0)%4+1; UI.st=st2; var ss2=S.set.snd; S.set.snd=true; sfx(st2); S.set.snd=ss2;
+    toast(['',TR('파'),TR('버디'),TR('이글'),TR('홀인원')][st2]+' 🔊'+(isIOS()?'  '+TR('안 들리면: 무음 스위치 해제 · 볼륨 올리기'):''),3000); return;
+  }
+  if(a==='vibTest'){
+    var vt=(UI.vt||0)%4+1; UI.vt=vt; var sv=S.set.vib; S.set.vib=true; vibrate(vt); S.set.vib=sv;
+    var iv=iosMajor();
+    if(!navigator.vibrate&&isIOS()){
+      if(iv&&iv<18){ toast(TR('아이폰 iOS ')+iv+TR(' — 웹앱 진동은 iOS 18 이상에서만 됩니다'),4000); }
+      else { toast(['',TR('파'),TR('버디'),TR('이글'),TR('홀인원')][vt]+' 📳  '+TR('안 느껴지면: 설정 → 사운드 및 햅틱 → 시스템 햅틱 켜기'),4500); }
+    } else { toast(['',TR('파'),TR('버디'),TR('이글'),TR('홀인원')][vt]+' 📳'); }
+    return;
+  }
   if(a==='setv'){ var k=el.getAttribute('data-k'), v=el.getAttribute('data-v'); S.set[k]=(v==='true')?true:(v==='false'?false:v); save(); applyTheme(); checkBadge(); render(); return; }
   /* 설정 화면 */
   if(a==='n'){ UI.setup.n=parseInt(el.getAttribute('data-v'),10); render(); return; }
@@ -1604,7 +1674,7 @@ document.addEventListener('touchend',function(e){
 document.addEventListener('gesturestart',function(e){ if(!(e.target.closest&&e.target.closest('#mapFull'))){ e.preventDefault(); } },{passive:false});
 
 /* ================= 호스팅 배지 감지 ================= */
-var OWN={hapSw:1,hapLb:1,fxCanvas:1,fxBanner:1,actBar:1,langPick:1,updBar:1,installBar:1,main:1,tabs:1,mapFull:1,iosGuide:1,modalRoot:1,toast:1,fileIn:1};
+var OWN={fxCanvas:1,fxBanner:1,actBar:1,langPick:1,updBar:1,installBar:1,main:1,tabs:1,mapFull:1,iosGuide:1,modalRoot:1,toast:1,fileIn:1};
 function checkBadge(){
   var found=false;
   Array.prototype.forEach.call(document.body.children,function(el){

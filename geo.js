@@ -670,7 +670,7 @@ function signSVG(o){
     var c=[[p[0]+d[0]*a+n[0]*bw,p[1]+d[1]*a+n[1]*bw],[p[0]+d[0]*a-n[0]*bw,p[1]+d[1]*a-n[1]*bw],[p[0]-d[0]*a-n[0]*bw,p[1]-d[1]*a-n[1]*bw],[p[0]-d[0]*a+n[0]*bw,p[1]-d[1]*a+n[1]*bw]];
     var on=t.key===o.tee;
     s+=poly(c,SIGN.tees[t.key]||'#fff',on?'#ffd23f':(t.key==='white'?'#555':'#fff'),(on?2.2:1)*u);
-    if(t.y){ var lp=[p[0]+n[0]*(bw+6*u)*side,p[1]+n[1]*(bw+6*u)*side]; s+='<text x="'+Sx(lp)+'" y="'+(+Sy(lp)+fs*0.36).toFixed(1)+'" font-size="'+fs.toFixed(2)+'" text-anchor="'+(side<0?'end':'start')+'"'+txt+'>'+t.y+'</text>'; } });
+    if(t.y){ var lp=[p[0]+n[0]*(bw+6*u)*side,p[1]+n[1]*(bw+6*u)*side], ty=unit==='m'?Math.round(t.y*0.9144):t.y; s+='<text x="'+Sx(lp)+'" y="'+(+Sy(lp)+fs*0.36).toFixed(1)+'" font-size="'+fs.toFixed(2)+'" text-anchor="'+(side<0?'end':'start')+'"'+txt+'>'+ty+'</text>'; } });
   /* 깃발 */
   var G=[+Sx(gc),+Sy(gc)], fh=18*u, fw=10*u;
   s+='<circle cx="'+G[0]+'" cy="'+G[1]+'" r="'+(1.8*u).toFixed(2)+'" fill="#fff"/><line x1="'+G[0]+'" y1="'+G[1]+'" x2="'+G[0]+'" y2="'+(G[1]-fh).toFixed(1)+'" stroke="#fff" stroke-width="'+(1.6*u).toFixed(2)+'"/><polygon points="'+G[0]+','+(G[1]-fh).toFixed(1)+' '+(G[0]+fw).toFixed(1)+','+(G[1]-fh*0.75).toFixed(1)+' '+G[0]+','+(G[1]-fh*0.5).toFixed(1)+'" fill="#e53935"/>';

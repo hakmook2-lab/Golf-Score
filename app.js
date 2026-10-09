@@ -3,7 +3,7 @@
    ============================================================ */
 (function(){
 'use strict';
-var VERSION='3.12.1';
+var VERSION='3.12.2';
 
 /* ================= 상태 ================= */
 var KEY='golfscore.v1';
@@ -304,6 +304,9 @@ function toast(m,ms){ var t=$('#toast'); t.textContent=m; t.className=UI.modal?'
 function buzz(){ try{ if(navigator.vibrate){ navigator.vibrate(8); } }catch(e){} }
 function range(a,b){ var o=[]; for(var i=a;i<b;i++){ o.push(i); } return o; }
 function unitName(){ return S.set.unit==='m'?'m':'yd'; }
+/* 스코어카드 야드 → 설정 단위 숫자 (미터 설정이면 m로 환산) */
+function ydU(y){ return S.set.unit==='m'?Math.round(y*0.9144):y; }
+function ydUnit(){ return S.set.unit==='m'?'m':'y'; }
 
 /* ================= 코스 ================= */
 function allCourses(){ return COURSES.concat(S.custom||[]); }
@@ -600,8 +603,8 @@ function holeSignHtml(r,big){
   var mapY=r.yd&&r.yd.map?r.yd.map[h]:null, tee=r.tee||'white';
   var res=GEO.signSVG({geo:g, hole:gh, par:r.par[h], yd:yd, mapYd:mapY, tee:tee, unit:S.set.unit, pos:UI.pos, pin:pinOf(r.courseId,ref), px:signPx(big), fontPx:S.set.contrast==='high'?19:16, noTap:!!big});
   if(!big){ UI.holeMeta=res.meta; }
-  var chips=['black','blue','white','red'].filter(function(k){ return yd[k]; }).map(function(k){ return '<span class="tc '+k+(k===tee?' on':'')+'"><i></i>'+yd[k]+'<small>y</small></span>'; }).join('');
-  if(!chips&&mapY){ chips='<span class="tc map"><i></i>'+mapY+'<small>y</small></span>'; }
+  var chips=['black','blue','white','red'].filter(function(k){ return yd[k]; }).map(function(k){ return '<span class="tc '+k+(k===tee?' on':'')+'"><i></i>'+ydU(yd[k])+'<small>'+ydUnit()+'</small></span>'; }).join('');
+  if(!chips&&mapY){ chips='<span class="tc map"><i></i>'+ydU(mapY)+'<small>'+ydUnit()+'</small></span>'; }
   var u=unitName();
   var leg='<span><i style="background:#8ccb67"></i>'+TR('페어웨이')+'</span><span><i style="background:#d2f0bb"></i>'+TR('그린')+'</span>'+
     (gh?'<span><i style="background:#f3e5b0"></i>'+TR('벙커')+'</span><span><i style="background:#5fa9e6"></i>'+TR('해저드')+'</span>':'')+
@@ -693,9 +696,9 @@ function zoomBind(){
 function yardText(r,h){
   if(!r.yd){ return ''; }
   var t=r.tee||'white';
-  if(r.yd[t]&&r.yd[t][h]){ return TEES[t]+' <b>'+r.yd[t][h]+'</b>y'; }
-  if(r.yd.black&&r.yd.black[h]){ return TR('블랙 <b>')+r.yd.black[h]+'</b>y'; }
-  if(r.yd.map&&r.yd.map[h]){ return TR('지도상 <b>')+r.yd.map[h]+'</b>y'; }
+  if(r.yd[t]&&r.yd[t][h]){ return TEES[t]+' <b>'+ydU(r.yd[t][h])+'</b>'+ydUnit(); }
+  if(r.yd.black&&r.yd.black[h]){ return TR('블랙 <b>')+ydU(r.yd.black[h])+'</b>'+ydUnit(); }
+  if(r.yd.map&&r.yd.map[h]){ return TR('지도상 <b>')+ydU(r.yd.map[h])+'</b>'+ydUnit(); }
   return '';
 }
 function teeLabel(r){ return (r&&r.tee&&TEES[r.tee])?TEES[r.tee]+TR(' 티'):''; }
